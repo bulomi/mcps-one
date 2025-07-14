@@ -2,6 +2,7 @@
 
 <div align="center">
 
+![Version](https://img.shields.io/badge/version-v1.0.0-brightgreen)
 ![MCP Tools Manager](https://img.shields.io/badge/MCP-Tools%20Manager-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
@@ -67,8 +68,8 @@ MCP工具管理系统是一个专为个人开发者设计的轻量级工具，�
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/mcp-tools-manager.git
-cd mcp-tools-manager
+git clone https://github.com/BuloMi/MCPS.ONE.git
+cd MCPS.ONE
 
 # 使用 Docker Compose 启动
 docker-compose up -d
@@ -81,8 +82,8 @@ open http://localhost:8000
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-username/mcp-tools-manager.git
-cd mcp-tools-manager
+git clone https://github.com/BuloMi/MCPS.ONE.git
+cd MCPS.ONE
 
 # 后端设置
 cd backend
@@ -154,7 +155,7 @@ curl -X POST http://localhost:8000/api/tools/import \
 ## 🏗️ 项目结构
 
 ```
-mcp-tools-manager/
+MCPS.ONE/
 ├── backend/                 # FastAPI 后端
 │   ├── api/                # API 路由
 │   ├── core/               # 核心业务逻辑
@@ -313,9 +314,9 @@ npm run lint:fix
 
 如果您遇到问题或有建议，请：
 
-- 📋 [提交 Issue](https://github.com/your-username/mcp-tools-manager/issues)
-- 💬 [参与讨论](https://github.com/your-username/mcp-tools-manager/discussions)
-- 📧 发送邮件至 your-email@example.com
+- 📋 [提交 Issue](https://github.com/BuloMi/MCPS.ONE/issues)
+- 💬 [参与讨论](https://github.com/BuloMi/MCPS.ONE/discussions)
+- 📧 发送邮件至 bulomi@example.com
 
 ---
 
