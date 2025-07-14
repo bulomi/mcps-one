@@ -1,9 +1,9 @@
-# MCP工具管理系统 - 单用户开源版本
+# MCPS.ONE
 
 <div align="center">
 
 ![Version](https://img.shields.io/badge/version-v1.0.0-brightgreen)
-![MCP Tools Manager](https://img.shields.io/badge/MCP-Tools%20Manager-blue)
+![MCPS.ONE](https://img.shields.io/badge/MCPS.ONE-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Vue](https://img.shields.io/badge/vue-3.x-green)
@@ -19,7 +19,7 @@
 
 ## 🎯 项目简介
 
-MCP工具管理系统是一个专为个人开发者设计的轻量级工具，用于管理和使用 MCP (Model Context Protocol) 工具。它提供了一个直观的 Web 界面，让您可以轻松配置、监控和使用各种 MCP 工具，无需复杂的命令行操作。
+MCPS.ONE是一个专为个人开发者设计的轻量级工具，用于管理和使用 MCP (Model Context Protocol) 工具。它提供了一个直观的 Web 界面，让您可以轻松配置、监控和使用各种 MCP 工具，无需复杂的命令行操作。
 
 ### 为什么选择这个项目？
 
