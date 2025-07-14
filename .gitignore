@@ -210,3 +210,6 @@ Thumbs.db
 # Package files
 *.tgz
 *.tar.gz
+
+# Development documentation (contains internal development rules and sensitive info)
+docs/
