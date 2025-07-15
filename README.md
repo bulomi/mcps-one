@@ -229,9 +229,6 @@ MCPS.ONE/
 │   │   ├── stores/         # 状态管理
 │   │   └── api/            # API 调用
 │   └── package.json
-├── docs/                   # 项目文档
-│   ├── MENU_OPTIMIZATION_PLAN.md   # 菜单优化计划
-│   └── MENU_CLEANUP_REPORT.md      # 清理报告
 ├── docker-compose.yml      # Docker 配置
 ├── README.md              # 项目说明
 
