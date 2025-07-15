@@ -92,26 +92,27 @@ class ToolService:
             # 创建工具实例
             tool = MCPTool(
                 name=tool_data.name,
+                display_name=tool_data.display_name,
                 description=tool_data.description,
                 type=tool_data.type,
                 category=tool_data.category,
+                tags=tool_data.tags,
                 command=tool_data.command,
-                args=tool_data.args or [],
-                env=tool_data.env or {},
-                working_dir=tool_data.working_dir,
-                connection_config=tool_data.connection_config.dict() if tool_data.connection_config else {},
-                runtime_config=tool_data.runtime_config.dict() if tool_data.runtime_config else {},
-                enabled=tool_data.enabled,
+                working_directory=tool_data.working_directory,
+                environment_variables=tool_data.environment_variables or {},
+                connection_type=tool_data.connection_type,
+                host=tool_data.host,
+                port=tool_data.port,
+                path=tool_data.path,
                 auto_start=tool_data.auto_start,
-                auto_restart=tool_data.auto_restart,
-                max_restarts=tool_data.max_restarts,
-                restart_delay=tool_data.restart_delay,
-                health_check_interval=tool_data.health_check_interval,
+                restart_on_failure=tool_data.restart_on_failure,
+                max_restart_attempts=tool_data.max_restart_attempts,
                 timeout=tool_data.timeout,
-                metadata=tool_data.metadata or {},
-                status=ToolStatus.STOPPED,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                version=tool_data.version,
+                author=tool_data.author,
+                homepage=tool_data.homepage,
+                enabled=tool_data.enabled,
+                status=ToolStatus.STOPPED
             )
             
             self.db.add(tool)
@@ -213,6 +214,23 @@ class ToolService:
             self.db.refresh(tool)
             
             logger.info(f"工具状态更新: {tool.name} {old_status.value} -> {status.value}")
+            
+            # 发送 WebSocket 通知
+            try:
+                import asyncio
+                from app.websocket import notify_tool_status_change
+                
+                # 在后台发送通知，不阻塞当前操作
+                asyncio.create_task(
+                    notify_tool_status_change(
+                        tool_id=tool.id,
+                        old_status=old_status.value,
+                        new_status=status.value
+                    )
+                )
+            except Exception as e:
+                logger.warning(f"发送工具状态变更通知失败: {e}")
+            
             return tool
             
         except Exception as e:
@@ -238,6 +256,140 @@ class ToolService:
         except Exception as e:
             self.db.rollback()
             logger.error(f"更新重启计数失败: {e}")
+            raise
+    
+    # 工具操作方法
+    async def start_tool(self, tool_id: int, force: bool = False) -> bool:
+        """启动工具"""
+        try:
+            from app.services.mcp_service import MCPService
+            
+            # 检查工具是否存在
+            tool = self.get_tool(tool_id)
+            if not tool:
+                raise ToolNotFoundError(f"工具不存在: {tool_id}")
+            
+            # 检查工具是否可以启动
+            if not tool.can_start and not force:
+                raise ToolValidationError(f"工具无法启动: {tool.name} (状态: {tool.status.value})")
+            
+            # 使用 MCP 服务启动工具
+            mcp_service = MCPService()
+            result = await mcp_service.start_tool(tool_id, force)
+            
+            logger.info(f"工具启动{'成功' if result else '失败'}: {tool.name} (ID: {tool_id})")
+            return result
+            
+        except Exception as e:
+            logger.error(f"启动工具失败: {e}")
+            raise
+    
+    async def stop_tool(self, tool_id: int, force: bool = False) -> bool:
+        """停止工具"""
+        try:
+            from app.services.mcp_service import MCPService
+            
+            # 检查工具是否存在
+            tool = self.get_tool(tool_id)
+            if not tool:
+                raise ToolNotFoundError(f"工具不存在: {tool_id}")
+            
+            # 检查工具是否可以停止
+            if not tool.can_stop and not force:
+                raise ToolValidationError(f"工具无法停止: {tool.name} (状态: {tool.status.value})")
+            
+            # 使用 MCP 服务停止工具
+            mcp_service = MCPService()
+            result = await mcp_service.stop_tool(tool_id, force)
+            
+            logger.info(f"工具停止{'成功' if result else '失败'}: {tool.name} (ID: {tool_id})")
+            return result
+            
+        except Exception as e:
+            logger.error(f"停止工具失败: {e}")
+            raise
+    
+    async def restart_tool(self, tool_id: int, force: bool = False) -> bool:
+        """重启工具"""
+        try:
+            from app.services.mcp_service import MCPService
+            
+            # 检查工具是否存在
+            tool = self.get_tool(tool_id)
+            if not tool:
+                raise ToolNotFoundError(f"工具不存在: {tool_id}")
+            
+            # 使用 MCP 服务重启工具
+            mcp_service = MCPService()
+            result = await mcp_service.restart_tool(tool_id, force)
+            
+            logger.info(f"工具重启{'成功' if result else '失败'}: {tool.name} (ID: {tool_id})")
+            return result
+            
+        except Exception as e:
+            logger.error(f"重启工具失败: {e}")
+            raise
+    
+    def get_tool_status(self, tool_id: int) -> Dict[str, Any]:
+        """获取工具状态信息"""
+        try:
+            tool = self.get_tool(tool_id)
+            if not tool:
+                raise ToolNotFoundError(f"工具不存在: {tool_id}")
+            
+            return {
+                "id": tool.id,
+                "name": tool.name,
+                "status": tool.status.value,
+                "enabled": tool.enabled,
+                "process_id": tool.process_id,
+                "last_started_at": tool.last_started_at.isoformat() if tool.last_started_at else None,
+                "last_stopped_at": tool.last_stopped_at.isoformat() if tool.last_stopped_at else None,
+                "last_error_at": tool.last_error_at.isoformat() if tool.last_error_at else None,
+                "last_error": tool.last_error,
+                "restart_count": tool.restart_count,
+                "can_start": tool.can_start,
+                "can_stop": tool.can_stop,
+                "is_running": tool.is_running
+            }
+            
+        except Exception as e:
+            logger.error(f"获取工具状态失败: {e}")
+            raise
+    
+    async def batch_tool_action(self, tool_ids: List[int], action: str, force: bool = False) -> Dict[str, Any]:
+        """批量工具操作"""
+        try:
+            results = {
+                "success": [],
+                "failed": [],
+                "total": len(tool_ids)
+            }
+            
+            for tool_id in tool_ids:
+                try:
+                    if action == "start":
+                        success = await self.start_tool(tool_id, force)
+                    elif action == "stop":
+                        success = await self.stop_tool(tool_id, force)
+                    elif action == "restart":
+                        success = await self.restart_tool(tool_id, force)
+                    else:
+                        raise ToolValidationError(f"不支持的操作: {action}")
+                    
+                    if success:
+                        results["success"].append(tool_id)
+                    else:
+                        results["failed"].append({"id": tool_id, "error": "操作失败"})
+                        
+                except Exception as e:
+                    results["failed"].append({"id": tool_id, "error": str(e)})
+            
+            logger.info(f"批量工具操作完成: {action}, 成功: {len(results['success'])}, 失败: {len(results['failed'])}")
+            return results
+            
+        except Exception as e:
+            logger.error(f"批量工具操作失败: {e}")
             raise
     
     # 工具分类管理
@@ -350,12 +502,12 @@ class ToolService:
             
             return {
                 "total": total_tools,
-                "running": running_tools,
-                "stopped": stopped_tools,
+                "active": running_tools,
+                "inactive": stopped_tools,
                 "error": error_tools,
                 "enabled": enabled_tools,
                 "disabled": total_tools - enabled_tools,
-                "by_type": {stat.type.value: stat.count for stat in type_stats},
+                "by_type": {(stat.type.value if stat.type else "未知"): stat.count for stat in type_stats},
                 "by_category": {stat.category or "未分类": stat.count for stat in category_stats}
             }
             
@@ -445,6 +597,41 @@ class ToolService:
             logger.error(f"导入工具配置失败: {e}")
             raise
     
+    def validate_tool_config(self, tool_data: ToolCreate) -> Dict[str, Any]:
+        """验证工具配置"""
+        try:
+            errors = []
+            warnings = []
+            
+            # 验证命令
+            if not tool_data.command or not tool_data.command.strip():
+                errors.append("工具命令不能为空")
+            
+            # 验证连接配置
+            if tool_data.type == ToolType.STDIO and not tool_data.command:
+                errors.append("STDIO 类型工具必须指定命令")
+            
+            if tool_data.connection_type in ["http", "websocket"]:
+                if not tool_data.host or not tool_data.port:
+                    errors.append(f"{tool_data.connection_type.upper()} 连接类型必须指定主机和端口")
+            
+            # 注意：这里不检查工具名称是否已存在，因为这是验证配置而不是创建工具
+            # 实际的重名检查应该在创建工具时进行
+            
+            return {
+                "valid": len(errors) == 0,
+                "errors": errors,
+                "warnings": warnings
+            }
+            
+        except Exception as e:
+            logger.error(f"验证工具配置失败: {e}")
+            return {
+                "valid": False,
+                "errors": [f"验证过程出错: {str(e)}"],
+                "warnings": []
+            }
+    
     # 私有方法
     def _validate_tool_config(self, tool_data: ToolCreate) -> None:
         """验证工具配置"""
@@ -453,13 +640,9 @@ class ToolService:
             raise ToolValidationError("工具命令不能为空")
         
         # 验证连接配置
-        if tool_data.type == ToolType.STDIO and not tool_data.command:
-            raise ToolValidationError("STDIO 类型工具必须指定命令")
-        
-        if tool_data.type == ToolType.SERVER and tool_data.connection_config:
-            config = tool_data.connection_config
-            if not config.host or not config.port:
-                raise ToolValidationError("服务器类型工具必须指定主机和端口")
+        if tool_data.connection_type in ["http", "websocket"]:
+            if not tool_data.host or not tool_data.port:
+                raise ToolValidationError(f"{tool_data.connection_type.upper()} 连接类型必须指定主机和端口")
     
     def _tool_to_export_dict(self, tool: MCPTool) -> Dict[str, Any]:
         """将工具转换为导出字典"""

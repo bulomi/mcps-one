@@ -18,13 +18,13 @@ if settings.DATABASE_URL.startswith("sqlite"):
             "timeout": 20
         },
         poolclass=StaticPool,
-        echo=settings.DEBUG
+        echo=settings.DB_ECHO
     )
 else:
     # 其他数据库配置
     engine = create_engine(
         settings.DATABASE_URL,
-        echo=settings.DEBUG
+        echo=settings.DB_ECHO
     )
 
 # 创建会话工厂

@@ -6,10 +6,15 @@ import logging
 import subprocess
 import signal
 import os
+import sys
+import platform
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 import psutil
 from contextlib import asynccontextmanager
+import shlex
 
 from app.models.tool import MCPTool, ToolStatus, ToolType
 from app.schemas.tool import ConnectionConfig
@@ -179,20 +184,19 @@ class MCPService:
             tool = tool_service.increment_restart_count(tool_id)
             
             # 检查重启次数限制
-            if tool.restart_count > tool.max_restarts and not force:
+            if tool.restart_count > tool.max_restart_attempts and not force:
                 tool_service.update_tool_status(
                     tool_id, 
                     ToolStatus.ERROR, 
-                    error_message=f"重启次数超过限制 ({tool.max_restarts})"
+                    error_message=f"重启次数超过限制 ({tool.max_restart_attempts})"
                 )
                 return False
             
             # 停止工具
             await self.stop_tool(tool_id, force=True)
             
-            # 等待重启延迟
-            if tool.restart_delay > 0:
-                await asyncio.sleep(tool.restart_delay)
+            # 等待1秒后重启
+            await asyncio.sleep(1)
             
             # 启动工具
             return await self.start_tool(tool_id, force)
@@ -337,43 +341,64 @@ class MCPService:
             logger.error(f"关闭 MCP 服务失败: {e}")
     
     # 私有方法
-    async def _start_process(self, tool: MCPTool) -> Optional[subprocess.Popen]:
-        """启动进程"""
+    def _start_process_sync(self, tool: MCPTool) -> Optional[subprocess.Popen]:
+        """同步启动工具进程（在线程中运行）"""
         try:
-            # 构建命令
-            cmd = [tool.command] + (tool.args or [])
-            
             # 构建环境变量
             env = os.environ.copy()
-            if tool.env:
-                env.update(tool.env)
+            if tool.environment_variables:
+                env.update(tool.environment_variables)
+            
+            logger.info(f"启动工具进程: {tool.name}, 命令: {tool.command}")
             
             # 启动进程
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env,
-                cwd=tool.working_dir,
-                start_new_session=True
-            )
+            # 如果working_directory为空，则不设置cwd参数
+            kwargs = {
+                "stdin": subprocess.PIPE,
+                "stdout": subprocess.PIPE,
+                "stderr": subprocess.PIPE,
+                "env": env
+            }
             
-            # 等待进程启动
-            await asyncio.sleep(0.5)
+            # 只有当working_directory不为空时才设置cwd
+            if tool.working_directory and tool.working_directory.strip():
+                kwargs["cwd"] = tool.working_directory
+            
+            # Windows平台特殊处理
+            if platform.system() == "Windows":
+                # 在Windows上使用shell=True来执行命令，这样可以执行内置命令如echo
+                kwargs["shell"] = True
+                kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+                process = subprocess.Popen(tool.command, **kwargs)
+            else:
+                # 在非Windows平台上解析命令和参数
+                cmd_parts = shlex.split(tool.command)
+                kwargs["start_new_session"] = True
+                process = subprocess.Popen(cmd_parts, **kwargs)
+            
+            # 等待一小段时间确保进程启动
+            import time
+            time.sleep(0.1)
             
             # 检查进程是否还在运行
-            if process.returncode is not None:
-                stderr = await process.stderr.read()
-                error_msg = stderr.decode('utf-8', errors='ignore')
-                logger.error(f"进程启动失败: {error_msg}")
+            if process.poll() is not None:
+                logger.error(f"进程启动后立即退出，退出码: {process.returncode}")
                 return None
             
+            logger.info(f"工具进程启动成功: {tool.name}, PID: {process.pid}")
             return process
             
         except Exception as e:
-            logger.error(f"启动进程失败: {e}")
+            import traceback
+            error_details = f"启动进程失败: {e}\n命令: {tool.command}\n工作目录: {tool.working_directory or '未设置'}\n异常详情: {traceback.format_exc()}"
+            logger.error(error_details)
             return None
+    
+    async def _start_process(self, tool: MCPTool) -> Optional[subprocess.Popen]:
+        """异步启动工具进程"""
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor() as executor:
+            return await loop.run_in_executor(executor, self._start_process_sync, tool)
     
     async def _stop_process(self, tool_id: int, force: bool = False) -> bool:
         """停止进程"""
@@ -416,22 +441,21 @@ class MCPService:
     async def _create_client(self, tool: MCPTool, process: subprocess.Popen) -> Optional[MCPClient]:
         """创建 MCP 客户端"""
         try:
-            if tool.type == ToolType.STDIO:
+            if tool.connection_type == "stdio":
                 # STDIO 连接
                 client = MCPClient(
                     connection_type="stdio",
                     process=process
                 )
-            elif tool.type == ToolType.SERVER:
+            elif tool.connection_type in ["http", "websocket"]:
                 # 服务器连接
-                config = tool.connection_config or {}
                 client = MCPClient(
-                    connection_type="server",
-                    host=config.get("host", "localhost"),
-                    port=config.get("port", 8080)
+                    connection_type=tool.connection_type,
+                    host=tool.host or "localhost",
+                    port=tool.port or 8080
                 )
             else:
-                logger.error(f"不支持的工具类型: {tool.type}")
+                logger.error(f"不支持的连接类型: {tool.connection_type}")
                 return None
             
             # 连接客户端
@@ -501,7 +525,7 @@ class MCPService:
                         await self._cleanup_process(tool_id)
                         
                         # 检查是否需要自动重启
-                        if tool.auto_restart and tool.restart_count < tool.max_restarts:
+                        if tool.restart_on_failure and tool.restart_count < tool.max_restart_attempts:
                             logger.info(f"工具异常退出，自动重启: {tool.name}")
                             asyncio.create_task(self.restart_tool(tool_id))
                         else:
@@ -527,7 +551,7 @@ class MCPService:
                     db.close()
                     
                     # 等待下次检查
-                    await asyncio.sleep(tool.health_check_interval or 30)
+                    await asyncio.sleep(30)  # 固定30秒检查间隔
                     
                 except Exception as e:
                     logger.error(f"健康检查失败 {tool_id}: {e}")

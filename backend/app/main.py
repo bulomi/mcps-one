@@ -8,8 +8,9 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api import tools, proxy, monitor, system
+from app.api import api_router
 from app.utils.response import error_response
+from app.websocket import websocket_endpoint
 
 # 配置日志
 logging.basicConfig(
@@ -68,10 +69,10 @@ async def global_exception_handler(request, exc):
 
 
 # 注册路由
-app.include_router(tools.router, prefix="/api")
-app.include_router(proxy.router, prefix="/api")
-app.include_router(monitor.router, prefix="/api")
-app.include_router(system.router, prefix="/api")
+app.include_router(api_router)  # 包含 /api/v1 前缀的主路由
+
+# WebSocket 路由
+app.websocket("/ws")(websocket_endpoint)
 
 
 # 根路径

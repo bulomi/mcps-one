@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-v1.0.0-brightgreen)
+![Version](https://img.shields.io/badge/version-v1.0.1-brightgreen)
 ![MCPS.ONE](https://img.shields.io/badge/MCPS.ONE-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
@@ -44,17 +44,23 @@ MCPS.ONE是一个专为个人开发者设计的轻量级工具，用于管理和
 - **请求路由**: HTTP API 到 MCP 工具的智能路由
 - **错误恢复**: 自动重试和故障恢复机制
 
-### 📊 监控和管理
-- **实时状态**: 工具连接状态和性能监控
+### 📋 会话和任务管理
+- **会话管理**: 创建、管理和跟踪 MCP 会话
+- **任务调度**: 任务创建、执行和状态监控
+- **历史记录**: 完整的会话和任务执行历史
+- **状态跟踪**: 实时的执行状态和进度监控
+
+### 📊 系统监控
+- **系统统计**: 实时的系统资源使用情况
 - **日志管理**: 详细的操作和错误日志
+- **代理状态**: MCP 代理服务状态监控
 - **数据备份**: 自动数据库备份和恢复
-- **系统设置**: 灵活的系统配置选项
 
 ### 🎨 用户界面
 - **仪表板**: 系统概览和快速操作
 - **工具详情**: 详细的工具信息和控制面板
 - **响应式设计**: 支持桌面和移动端
-- **主题切换**: 明暗主题支持
+- **简洁设计**: 专注核心功能的简化界面
 
 ## 🚀 快速开始
 
@@ -158,19 +164,34 @@ curl -X POST http://localhost:8000/api/tools/import \
 MCPS.ONE/
 ├── backend/                 # FastAPI 后端
 │   ├── api/                # API 路由
+│   │   ├── tools.py        # 工具管理 API
+│   │   ├── system.py       # 系统信息 API
+│   │   ├── sessions.py     # 会话管理 API
+│   │   ├── tasks.py        # 任务管理 API
+│   │   └── logs.py         # 日志管理 API
 │   ├── core/               # 核心业务逻辑
 │   ├── models/             # 数据模型
+│   ├── services/           # 业务服务层
 │   └── main.py             # 应用入口
 ├── frontend/               # Vue 3 前端
 │   ├── src/
 │   │   ├── components/     # 组件
-│   │   ├── views/          # 页面
-│   │   ├── store/          # 状态管理
+│   │   ├── views/          # 页面视图
+│   │   │   ├── DashboardView.vue    # 仪表板
+│   │   │   ├── ToolsView.vue        # 工具管理
+│   │   │   ├── SessionsView.vue     # 会话管理
+│   │   │   ├── TasksView.vue        # 任务管理
+│   │   │   ├── LogsView.vue         # 日志查看
+│   │   │   └── SystemSettingsView.vue # 系统设置
+│   │   ├── stores/         # 状态管理
 │   │   └── api/            # API 调用
 │   └── package.json
+├── docs/                   # 项目文档
+│   ├── MENU_OPTIMIZATION_PLAN.md   # 菜单优化计划
+│   └── MENU_CLEANUP_REPORT.md      # 清理报告
 ├── docker-compose.yml      # Docker 配置
 ├── README.md              # 项目说明
-└── docs/                  # 文档
+└── v1.0.1_development_plan.md # 开发计划
 ```
 
 ## 🔧 配置说明
@@ -263,13 +284,17 @@ npm run lint:fix
 
 | 端点 | 方法 | 描述 |
 |------|------|------|
-| `/api/tools` | GET | 获取工具列表 |
-| `/api/tools` | POST | 创建新工具 |
-| `/api/tools/{id}` | PUT | 更新工具配置 |
-| `/api/tools/{id}/start` | POST | 启动工具 |
-| `/api/tools/{id}/stop` | POST | 停止工具 |
-| `/api/mcp/tools/{name}` | POST | 调用 MCP 工具 |
-| `/api/logs` | GET | 获取系统日志 |
+| `/api/v1/tools` | GET | 获取工具列表 |
+| `/api/v1/tools` | POST | 创建新工具 |
+| `/api/v1/tools/{id}` | PUT | 更新工具配置 |
+| `/api/v1/tools/{id}/start` | POST | 启动工具 |
+| `/api/v1/tools/{id}/stop` | POST | 停止工具 |
+| `/api/v1/sessions` | GET | 获取会话列表 |
+| `/api/v1/sessions` | POST | 创建新会话 |
+| `/api/v1/tasks` | GET | 获取任务列表 |
+| `/api/v1/tasks` | POST | 创建新任务 |
+| `/api/v1/system/stats` | GET | 获取系统统计信息 |
+| `/api/v1/logs` | GET | 获取系统日志 |
 
 ## 🤝 贡献指南
 

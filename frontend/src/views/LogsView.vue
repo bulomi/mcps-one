@@ -260,6 +260,8 @@ import {
   SearchOutline,
   EyeOutline
 } from '@vicons/ionicons5'
+import { getLogSummary, getAllLogs, cleanupLogs, exportLogs } from '@/api/logs'
+import { formatBytes, formatDateTime, formatDuration } from '@/utils/format'
 
 // 消息提示函数
 const showMessage = (type: 'success' | 'error' | 'info' | 'warning', content: string) => {
@@ -404,100 +406,54 @@ const logColumns: DataTableColumns<any> = [
 // 方法
 const loadLogStats = async () => {
   try {
-    // TODO: 调用实际API
-    // const response = await logsApi.getStats()
-    // logStats.value = response.data
-    
-    // 模拟数据
+    const response = await getLogSummary()
     logStats.value = {
-      total: 1250,
-      errors: 23,
-      warnings: 156,
-      today: 89
-    }
+       total: response.data.total_logs || 0,
+       error: response.data.error_logs || 0,
+       warning: response.data.warning_logs || 0,
+       today: response.data.today_logs || 0
+     }
   } catch (error) {
     console.error('加载日志统计失败:', error)
     showMessage('error', '加载日志统计失败')
+    // 使用默认值
+     logStats.value = {
+       total: 0,
+       error: 0,
+       warning: 0,
+       today: 0
+     }
   }
 }
 
 const loadLogs = async () => {
   loading.value = true
   try {
-    // TODO: 调用实际API
-    // const params = {
-    //   page: pagination.value.page,
-    //   size: pagination.value.pageSize,
-    //   ...filters.value
-    // }
-    // const response = await logsApi.getLogs(params)
-    // logs.value = response.data.items
-    // pagination.value.itemCount = response.data.total
+    const params = {
+       page: pagination.page,
+       size: pagination.pageSize,
+       logType: filters.logType,
+       level: filters.level,
+       source: filters.source,
+       search: filters.search,
+       dateRange: filters.dateRange
+     }
     
-    // 模拟数据
-    const mockLogs = [
-      {
-        id: 1,
-        timestamp: new Date().toISOString(),
-        level: 'INFO',
-        category: 'system',
-        source: 'api',
-        tool_name: null,
-        message: '系统启动成功',
-        details: { version: '1.0.0', port: 8000 },
-        stack_trace: null
-      },
-      {
-        id: 2,
-        timestamp: new Date(Date.now() - 60000).toISOString(),
-        level: 'ERROR',
-        category: 'mcp',
-        source: 'mcp-client',
-        tool_name: 'file-manager',
-        message: 'MCP工具连接失败',
-        details: { error: 'Connection timeout', timeout: 30 },
-        stack_trace: 'Traceback (most recent call last):\n  File "mcp_client.py", line 45, in connect\n    raise ConnectionError("Timeout")\nConnectionError: Timeout'
-      },
-      {
-        id: 3,
-        timestamp: new Date(Date.now() - 120000).toISOString(),
-        level: 'WARNING',
-        category: 'operation',
-        source: 'api',
-        tool_name: 'web-scraper',
-        message: '工具执行超时警告',
-        details: { execution_time: 35, timeout_limit: 30 },
-        stack_trace: null
-      },
-      {
-        id: 4,
-        timestamp: new Date(Date.now() - 180000).toISOString(),
-        level: 'DEBUG',
-        category: 'system',
-        source: 'database',
-        tool_name: null,
-        message: '数据库查询执行',
-        details: { query: 'SELECT * FROM tools', duration_ms: 15 },
-        stack_trace: null
-      },
-      {
-        id: 5,
-        timestamp: new Date(Date.now() - 240000).toISOString(),
-        level: 'CRITICAL',
-        category: 'system',
-        source: 'system',
-        tool_name: null,
-        message: '磁盘空间不足',
-        details: { available_space: '500MB', threshold: '1GB' },
-        stack_trace: null
+    // 过滤空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
       }
-    ]
+    })
     
-    logs.value = mockLogs
-    pagination.value.itemCount = mockLogs.length
+    const response = await getAllLogs(params)
+    logs.value = response.data.items || []
+    pagination.value.itemCount = response.data.total || 0
   } catch (error) {
     console.error('加载日志失败:', error)
     showMessage('error', '加载日志失败')
+    logs.value = []
+    pagination.value.itemCount = 0
   } finally {
     loading.value = false
   }
@@ -542,8 +498,41 @@ const viewLogDetail = (log: any) => {
 
 const exportLogs = async () => {
   try {
-    // TODO: 实现日志导出功能
-    showMessage('info', '日志导出功能开发中')
+    const params = {
+       log_type: filters.logType || 'system',
+       format: 'csv',
+       level: filters.level,
+       category: filters.source,
+       search: filters.search
+     }
+     
+     // 处理时间范围
+     if (filters.dateRange && filters.dateRange.length === 2) {
+       params.start_time = new Date(filters.dateRange[0]).toISOString()
+       params.end_time = new Date(filters.dateRange[1]).toISOString()
+     }
+    
+    // 过滤空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+    
+    const response = await exportLogs(params)
+    
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'text/csv' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `logs_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    showMessage('success', '日志导出成功')
   } catch (error) {
     console.error('导出日志失败:', error)
     showMessage('error', '导出日志失败')
@@ -553,8 +542,7 @@ const exportLogs = async () => {
 const cleanupLogs = async () => {
   cleanupLoading.value = true
   try {
-    // TODO: 调用清理API
-    // await logsApi.cleanup(cleanupForm.value)
+    await cleanupLogs(cleanupForm)
     
     showCleanupModal.value = false
     showMessage('success', '日志清理完成')

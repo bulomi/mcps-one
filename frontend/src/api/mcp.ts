@@ -182,6 +182,36 @@ export const mcpApi = {
   }> {
     const response = await api.get('/mcp-agent/health')
     return response.data.data
+  },
+
+  // 工具状态管理
+  async getToolStatus(toolName: string): Promise<{
+    tool_name: string
+    status: string
+    is_connected: boolean
+    process_id?: number
+    last_check: string
+  }> {
+    const response = await api.get(`/mcp-agent/tools/${toolName}/status`)
+    return response.data.data
+  },
+
+  async reconnectTool(toolName: string): Promise<{
+    tool_name: string
+    status: string
+    message: string
+  }> {
+    const response = await api.post(`/mcp-agent/tools/${toolName}/reconnect`)
+    return response.data.data
+  },
+
+  async disconnectTool(toolName: string): Promise<{
+    tool_name: string
+    status: string
+    message: string
+  }> {
+    const response = await api.post(`/mcp-agent/tools/${toolName}/disconnect`)
+    return response.data.data
   }
 }
 

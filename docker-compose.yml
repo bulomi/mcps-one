@@ -1,0 +1,124 @@
+# MCPS.ONE Docker Compose 配置
+version: '3.8'
+
+services:
+  # MCP 服务端
+  mcp-server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mcps-mcp-server
+    ports:
+      - "8001:8000"  # FastMCP 使用默认端口 8000
+    environment:
+      - MCP_SERVER_TRANSPORT=http
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8000
+      - MCP_SERVER_LOG_LEVEL=INFO
+      - DATABASE_URL=sqlite:///./data/mcps.db
+      - HEALTH_CHECK_ENABLED=true
+      - METRICS_ENABLED=true
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mcps-network
+
+  # 前端应用
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mcps-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+      - VITE_MCP_SERVER_URL=http://localhost:8001
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    restart: unless-stopped
+    depends_on:
+      - mcp-server
+    networks:
+      - mcps-network
+
+  # Nginx 反向代理 (可选)
+  nginx:
+    image: nginx:alpine
+    container_name: mcps-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - mcp-server
+    networks:
+      - mcps-network
+    profiles:
+      - production
+
+  # Prometheus 监控 (可选)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mcps-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - mcps-network
+    profiles:
+      - monitoring
+
+  # Grafana 仪表板 (可选)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mcps-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - mcps-network
+    profiles:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  mcps-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

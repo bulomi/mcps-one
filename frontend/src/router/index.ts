@@ -16,18 +16,18 @@ const router = createRouter({
         },
         {
           path: '/tools',
-          name: 'tools-manage',
+          name: 'tools',
           component: () => import('../views/ToolsView.vue'),
         },
         {
-          path: '/tools/config',
-          name: 'tools-config',
-          component: () => import('../views/ToolConfigView.vue'),
+          path: '/proxy',
+          name: 'proxy',
+          redirect: '/proxy/sessions'
         },
         {
-          path: '/proxy',
-          name: 'proxy-manage',
-          component: () => import('../views/MCPAgentView.vue'),
+          path: '/proxy/sessions',
+          name: 'proxy-sessions',
+          component: () => import('../views/MCPAgentSessionView.vue'),
         },
         {
           path: '/proxy/status',
@@ -35,9 +35,9 @@ const router = createRouter({
           component: () => import('../views/ProxyStatusView.vue'),
         },
         {
-          path: '/monitor',
-          name: 'monitor',
-          component: () => import('../views/MonitorView.vue'),
+          path: '/mcp-unified',
+          name: 'mcp-unified',
+          component: () => import('../components/MCPUnifiedManager.vue'),
         },
         {
           path: '/logs',
@@ -48,16 +48,6 @@ const router = createRouter({
           path: '/settings',
           name: 'settings',
           component: () => import('../views/SystemSettingsView.vue'),
-        },
-        {
-          path: '/profile',
-          name: 'profile',
-          component: () => import('../views/ProfileView.vue'),
-        },
-        {
-          path: '/about',
-          name: 'about',
-          component: () => import('../views/AboutView.vue'),
         },
       ],
     },

@@ -53,7 +53,7 @@ async def call_tool(
         if not tool:
             return error_response(message="工具不存在", status_code=404)
         
-        if not tool.is_enabled:
+        if not tool.enabled:
             return error_response(message="工具未启用", status_code=400)
         
         # 获取MCP客户端
@@ -121,18 +121,18 @@ async def list_tools(
         mcp_service = MCPService()
         
         # 获取所有工具
-        tools = await tool_service.get_all_tools()
+        tools, _ = tool_service.get_tools()
         
         # 获取工具状态和能力信息
         tool_list = []
         for tool in tools:
-            client = mcp_service.get_client(tool.name)
+            client = mcp_service.get_client(tool.id)
             
             tool_info = {
                 "id": tool.id,
                 "name": tool.name,
                 "description": tool.description,
-                "is_enabled": tool.is_enabled,
+                "is_enabled": tool.enabled,
                 "is_connected": client is not None,
                 "capabilities": None
             }
@@ -175,12 +175,12 @@ async def list_resources(
         if not tool:
             return error_response(message="工具不存在", status_code=404)
         
-        if not tool.is_enabled:
+        if not tool.enabled:
             return error_response(message="工具未启用", status_code=400)
         
         # 获取MCP客户端
         mcp_service = MCPService()
-        client = mcp_service.get_client(tool_name)
+        client = mcp_service.get_client(tool.id)
         
         if not client:
             return error_response(message="MCP客户端未连接", status_code=503)
@@ -214,12 +214,12 @@ async def read_resource(
         if not tool:
             return error_response(message="工具不存在", status_code=404)
         
-        if not tool.is_enabled:
+        if not tool.enabled:
             return error_response(message="工具未启用", status_code=400)
         
         # 获取MCP客户端
         mcp_service = MCPService()
-        client = mcp_service.get_client(tool_name)
+        client = mcp_service.get_client(tool.id)
         
         if not client:
             return error_response(message="MCP客户端未连接", status_code=503)
@@ -254,12 +254,12 @@ async def list_prompts(
         if not tool:
             return error_response(message="工具不存在", status_code=404)
         
-        if not tool.is_enabled:
+        if not tool.enabled:
             return error_response(message="工具未启用", status_code=400)
         
         # 获取MCP客户端
         mcp_service = MCPService()
-        client = mcp_service.get_client(tool_name)
+        client = mcp_service.get_client(tool.id)
         
         if not client:
             return error_response(message="MCP客户端未连接", status_code=503)
@@ -293,12 +293,12 @@ async def get_prompt(
         if not tool:
             return error_response(message="工具不存在", status_code=404)
         
-        if not tool.is_enabled:
+        if not tool.enabled:
             return error_response(message="工具未启用", status_code=400)
         
         # 获取MCP客户端
         mcp_service = MCPService()
-        client = mcp_service.get_client(tool_name)
+        client = mcp_service.get_client(tool.id)
         
         if not client:
             return error_response(message="MCP客户端未连接", status_code=503)
@@ -418,3 +418,119 @@ async def health_check():
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return error_response(message="健康检查失败", error_code=str(e))
+
+
+@router.get("/tools/{tool_name}/status", response_model=dict, summary="获取工具连接状态")
+async def get_tool_status(
+    tool_name: str,
+    db: Session = Depends(get_db)
+):
+    """获取指定工具的连接状态"""
+    try:
+        # 获取工具信息
+        tool_service = ToolService(db)
+        tool = await tool_service.get_tool_by_name(tool_name)
+        
+        if not tool:
+            return error_response(message="工具不存在", status_code=404)
+        
+        # 获取MCP服务实例
+        mcp_service = MCPService()
+        
+        # 获取实时状态
+        status = await mcp_service.get_tool_status(tool.id)
+        
+        # 检查客户端连接
+        client = mcp_service.get_client(tool.id)
+        is_connected = False
+        if client:
+            is_connected = await client.is_connected()
+        
+        return success_response(
+            data={
+                "tool_name": tool.name,
+                "status": status.value if status else "unknown",
+                "is_connected": is_connected,
+                "process_id": tool.process_id,
+                "restart_count": tool.restart_count,
+                "last_error": tool.error_message,
+                "updated_at": tool.updated_at.isoformat() if tool.updated_at else None
+            },
+            message="获取工具状态成功"
+        )
+        
+    except Exception as e:
+        logger.error(f"获取工具状态失败: {e}")
+        return error_response(message="获取工具状态失败", error_code=str(e))
+
+
+@router.post("/tools/{tool_name}/reconnect", response_model=dict, summary="重连工具")
+async def reconnect_tool(
+    tool_name: str,
+    db: Session = Depends(get_db)
+):
+    """重连指定工具"""
+    try:
+        # 获取工具信息
+        tool_service = ToolService(db)
+        tool = await tool_service.get_tool_by_name(tool_name)
+        
+        if not tool:
+            return error_response(message="工具不存在", status_code=404)
+        
+        # 获取MCP服务实例
+        mcp_service = MCPService()
+        
+        # 重启工具
+        success = await mcp_service.restart_tool(tool.id, force=True)
+        
+        if success:
+            return success_response(
+                data={
+                    "tool_name": tool.name,
+                    "reconnected": True
+                },
+                message="工具重连成功"
+            )
+        else:
+            return error_response(message="工具重连失败", status_code=500)
+        
+    except Exception as e:
+        logger.error(f"重连工具失败: {e}")
+        return error_response(message="重连工具失败", error_code=str(e))
+
+
+@router.post("/tools/{tool_name}/disconnect", response_model=dict, summary="断开工具连接")
+async def disconnect_tool(
+    tool_name: str,
+    db: Session = Depends(get_db)
+):
+    """断开指定工具的连接"""
+    try:
+        # 获取工具信息
+        tool_service = ToolService(db)
+        tool = await tool_service.get_tool_by_name(tool_name)
+        
+        if not tool:
+            return error_response(message="工具不存在", status_code=404)
+        
+        # 获取MCP服务实例
+        mcp_service = MCPService()
+        
+        # 停止工具
+        success = await mcp_service.stop_tool(tool.id, force=True)
+        
+        if success:
+            return success_response(
+                data={
+                    "tool_name": tool.name,
+                    "disconnected": True
+                },
+                message="工具断开连接成功"
+            )
+        else:
+            return error_response(message="工具断开连接失败", status_code=500)
+        
+    except Exception as e:
+        logger.error(f"断开工具连接失败: {e}")
+        return error_response(message="断开工具连接失败", error_code=str(e))

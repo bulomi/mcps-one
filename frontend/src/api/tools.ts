@@ -7,7 +7,8 @@ export interface Tool {
   description: string
   category: string
   status: 'active' | 'inactive' | 'error'
-  config_path: string
+  command?: string
+  config_path?: string
   tags: string[]
   created_at: string
   updated_at: string
@@ -15,11 +16,34 @@ export interface Tool {
 
 // 创建工具的请求数据类型
 export interface CreateToolRequest {
+  // ToolBase fields
   name: string
-  description: string
-  category: string
-  config_path: string
-  tags: string[]
+  display_name: string
+  description?: string
+  type: string
+  category?: string
+  tags?: string[]
+  
+  // ToolConfigBase fields
+  command: string
+  working_directory?: string
+  environment_variables?: Record<string, string>
+  connection_type: string
+  host?: string
+  port?: number
+  path?: string
+  auto_start: boolean
+  restart_on_failure: boolean
+  max_restart_attempts: number
+  timeout: number
+  
+  // ToolMetadata fields
+  version?: string
+  author?: string
+  homepage?: string
+  
+  // ToolCreate specific
+  enabled: boolean
 }
 
 // 更新工具的请求数据类型
@@ -27,6 +51,7 @@ export interface UpdateToolRequest {
   name?: string
   description?: string
   category?: string
+  command?: string
   config_path?: string
   tags?: string[]
 }
@@ -106,6 +131,21 @@ export const toolsApi = {
         'Content-Type': 'multipart/form-data'
       }
     })
+  },
+
+  // 获取工具日志
+  getToolLogs: async (toolId: number): Promise<string[]> => {
+    return await api.get(`/tools/${toolId}/logs`)
+  },
+
+  // 清空工具日志
+  clearToolLogs: async (toolId: number): Promise<void> => {
+    return await api.delete(`/tools/${toolId}/logs`)
+  },
+
+  // 获取工具性能数据
+  getToolPerformance: async (toolId: number): Promise<any> => {
+    return await api.get(`/tools/${toolId}/performance`)
   }
 }
 

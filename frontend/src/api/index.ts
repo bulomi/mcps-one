@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { ErrorHandler } from '@/utils/errorHandler'
 
 // 创建axios实例
 const api = axios.create({
@@ -31,7 +32,8 @@ api.interceptors.response.use(
     return response.data
   },
   (error) => {
-    // 将错误信息添加到错误对象中，让组件处理消息显示
+    // 统一错误处理，但不自动显示错误消息
+    // 让调用方决定是否显示错误消息
     if (error.response) {
       const { status, data } = error.response
       switch (status) {
@@ -47,11 +49,20 @@ api.interceptors.response.use(
         case 404:
           error.message = '资源不存在'
           break
+        case 422:
+          error.message = data?.detail || '数据验证失败'
+          break
         case 500:
           error.message = '服务器内部错误'
           break
+        case 502:
+          error.message = '网关错误，服务暂时不可用'
+          break
+        case 503:
+          error.message = '服务暂时不可用，请稍后重试'
+          break
         default:
-          error.message = data?.detail || '请求失败'
+          error.message = data?.detail || `请求失败 (${status})`
       }
     } else if (error.request) {
       error.message = '网络连接失败，请检查网络设置'

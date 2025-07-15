@@ -1,6 +1,7 @@
 """MCP 工具相关数据模型"""
 
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, JSON, Enum
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
 from datetime import datetime
@@ -34,7 +35,7 @@ class MCPTool(Base):
     description = Column(Text, comment="工具描述")
     
     # 工具分类
-    type = Column(Enum(ToolType), default=ToolType.CUSTOM, comment="工具类型")
+    type = Column(Enum(ToolType, values_callable=lambda x: [e.value for e in x]), default=ToolType.CUSTOM, comment="工具类型")
     category = Column(String(50), index=True, comment="工具分类")
     tags = Column(JSON, default=list, comment="工具标签")
     
@@ -56,10 +57,12 @@ class MCPTool(Base):
     timeout = Column(Integer, default=30, comment="超时时间（秒）")
     
     # 状态信息
-    status = Column(Enum(ToolStatus), default=ToolStatus.STOPPED, comment="当前状态")
+    status = Column(Enum(ToolStatus, values_callable=lambda x: [e.value for e in x]), default=ToolStatus.STOPPED, comment="当前状态")
     process_id = Column(Integer, comment="进程ID")
     last_started_at = Column(DateTime, comment="最后启动时间")
     last_stopped_at = Column(DateTime, comment="最后停止时间")
+    last_error_at = Column(DateTime, comment="最后错误时间")
+    last_error = Column(Text, comment="最后错误信息")
     restart_count = Column(Integer, default=0, comment="重启次数")
     
     # 元数据
@@ -71,6 +74,10 @@ class MCPTool(Base):
     enabled = Column(Boolean, default=True, comment="是否启用")
     created_at = Column(DateTime, default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
+    
+    # 关联关系
+    sessions = relationship("MCPSession", back_populates="tool")
+    tasks = relationship("MCPTask", back_populates="tool")
     
     def __repr__(self):
         return f"<MCPTool(id={self.id}, name='{self.name}', status='{self.status}')>"
@@ -115,6 +122,8 @@ class MCPTool(Base):
             "process_id": self.process_id,
             "last_started_at": self.last_started_at.isoformat() if self.last_started_at else None,
             "last_stopped_at": self.last_stopped_at.isoformat() if self.last_stopped_at else None,
+            "last_error_at": self.last_error_at.isoformat() if self.last_error_at else None,
+            "last_error": self.last_error,
             "restart_count": self.restart_count,
             "version": self.version,
             "author": self.author,

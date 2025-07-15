@@ -20,15 +20,13 @@ from .tool import (
 from .system import (
     ConfigValueType,
     MetricType,
-    BackupType,
-    BackupStatus,
+
     SystemConfigCreate,
     SystemConfigUpdate,
     SystemConfigResponse,
     SystemInfoCreate,
     SystemInfoResponse,
-    DatabaseBackupCreate,
-    DatabaseBackupResponse,
+
     SystemStatus,
     SystemOperation,
     SystemOperationResult,
@@ -83,15 +81,13 @@ __all__ = [
     # 系统模式
     "ConfigValueType",
     "MetricType",
-    "BackupType",
-    "BackupStatus",
+
     "SystemConfigCreate",
     "SystemConfigUpdate",
     "SystemConfigResponse",
     "SystemInfoCreate",
     "SystemInfoResponse",
-    "DatabaseBackupCreate",
-    "DatabaseBackupResponse",
+
     "SystemStatus",
     "SystemOperation",
     "SystemOperationResult",

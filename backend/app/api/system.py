@@ -12,15 +12,13 @@ from app.schemas.system import (
     SystemConfigUpdate,
     SystemConfigResponse,
     SystemInfoResponse,
-    DatabaseBackupCreate,
-    DatabaseBackupResponse,
     SystemStatusResponse,
     SystemOperationCreate,
     ConfigBatchUpdate,
     HealthCheckResponse,
 )
 from app.services.system_service import SystemService
-from app.services.backup_service import BackupService
+
 from app.utils.response import success_response, error_response
 from app.utils.pagination import simple_paginate as paginate
 
@@ -246,153 +244,7 @@ async def health_check(
         logger.error(f"健康检查失败: {e}")
         return error_response(message="健康检查失败", error_code=str(e))
 
-# 数据库备份管理
-@router.get("/backups", response_model=dict, summary="获取备份列表")
-async def get_backups(
-    page: int = Query(1, ge=1, description="页码"),
-    size: int = Query(20, ge=1, le=100, description="每页大小"),
-    type: Optional[str] = Query(None, description="备份类型"),
-    status: Optional[str] = Query(None, description="备份状态"),
-    db: Session = Depends(get_db)
-):
-    """获取备份列表"""
-    try:
-        backup_service = BackupService(db)
-        
-        # 构建过滤条件
-        filters = {}
-        if type:
-            filters['type'] = type
-        if status:
-            filters['status'] = status
-        
-        # 获取备份列表
-        backups, total = backup_service.get_backups(
-            page=page,
-            size=size,
-            filters=filters
-        )
-        
-        # 分页信息
-        pagination = paginate(total, page, size)
-        
-        return success_response(
-            data={
-                "items": [backup.to_dict() for backup in backups],
-                "pagination": pagination
-            },
-            message="获取备份列表成功"
-        )
-    except Exception as e:
-        logger.error(f"获取备份列表失败: {e}")
-        return error_response(message="获取备份列表失败", error_code=str(e))
 
-@router.post("/backups", response_model=dict, summary="创建数据库备份")
-async def create_backup(
-    backup_data: DatabaseBackupCreate,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
-):
-    """创建数据库备份"""
-    try:
-        backup_service = BackupService(db)
-        
-        # 创建备份记录
-        backup = backup_service.create_backup(backup_data)
-        
-        # 异步执行备份
-        background_tasks.add_task(
-            backup_service.execute_backup,
-            backup.id
-        )
-        
-        return success_response(
-            data=backup.to_dict(),
-            message="备份任务已创建，正在后台执行"
-        )
-    except Exception as e:
-        logger.error(f"创建数据库备份失败: {e}")
-        return error_response(message="创建数据库备份失败", error_code=str(e))
-
-@router.get("/backups/{backup_id}", response_model=dict, summary="获取备份详情")
-async def get_backup(
-    backup_id: int,
-    db: Session = Depends(get_db)
-):
-    """获取备份详情"""
-    try:
-        backup_service = BackupService(db)
-        backup = backup_service.get_backup(backup_id)
-        
-        if not backup:
-            raise HTTPException(status_code=404, detail="备份不存在")
-        
-        return success_response(
-            data=backup.to_dict(),
-            message="获取备份详情成功"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"获取备份详情失败: {e}")
-        return error_response(message="获取备份详情失败", error_code=str(e))
-
-@router.post("/backups/{backup_id}/restore", response_model=dict, summary="恢复数据库")
-async def restore_backup(
-    backup_id: int,
-    background_tasks: BackgroundTasks,
-    confirm: bool = Query(False, description="确认恢复"),
-    db: Session = Depends(get_db)
-):
-    """恢复数据库"""
-    try:
-        if not confirm:
-            raise HTTPException(status_code=400, detail="请确认恢复操作")
-        
-        backup_service = BackupService(db)
-        backup = backup_service.get_backup(backup_id)
-        
-        if not backup:
-            raise HTTPException(status_code=404, detail="备份不存在")
-        
-        if backup.status != "completed":
-            raise HTTPException(status_code=400, detail="备份未完成，无法恢复")
-        
-        # 异步执行恢复
-        background_tasks.add_task(
-            backup_service.restore_backup,
-            backup_id
-        )
-        
-        return success_response(message="数据库恢复任务已启动")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"恢复数据库失败: {e}")
-        return error_response(message="恢复数据库失败", error_code=str(e))
-
-@router.delete("/backups/{backup_id}", response_model=dict, summary="删除备份")
-async def delete_backup(
-    backup_id: int,
-    db: Session = Depends(get_db)
-):
-    """删除备份"""
-    try:
-        backup_service = BackupService(db)
-        backup = backup_service.get_backup(backup_id)
-        
-        if not backup:
-            raise HTTPException(status_code=404, detail="备份不存在")
-        
-        # 删除备份
-        backup_service.delete_backup(backup_id)
-        
-        return success_response(message="删除备份成功")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"删除备份失败: {e}")
-        return error_response(message="删除备份失败", error_code=str(e))
 
 # 设置导入导出
 @router.get("/settings/export", response_model=dict, summary="导出系统设置")
@@ -449,22 +301,6 @@ async def save_settings(
         return error_response(message="保存系统设置失败", error_code=str(e))
 
 # 系统测试
-@router.post("/test/database", response_model=dict, summary="测试数据库连接")
-async def test_database_connection(
-    db: Session = Depends(get_db)
-):
-    """测试数据库连接"""
-    try:
-        system_service = SystemService(db)
-        result = system_service.test_database_connection()
-        
-        return success_response(
-            data=result,
-            message="数据库连接测试完成"
-        )
-    except Exception as e:
-        logger.error(f"测试数据库连接失败: {e}")
-        return error_response(message="测试数据库连接失败", error_code=str(e))
 
 @router.post("/test/email", response_model=dict, summary="测试邮件通知")
 async def test_email_notification(
@@ -621,20 +457,3 @@ async def get_system_metrics(
     except Exception as e:
         logger.error(f"获取系统指标失败: {e}")
         return error_response(message="获取系统指标失败", error_code=str(e))
-
-@router.get("/performance", response_model=dict, summary="获取性能统计")
-async def get_performance_stats(
-    db: Session = Depends(get_db)
-):
-    """获取性能统计"""
-    try:
-        system_service = SystemService(db)
-        stats = system_service.get_performance_stats()
-        
-        return success_response(
-            data=stats,
-            message="获取性能统计成功"
-        )
-    except Exception as e:
-        logger.error(f"获取性能统计失败: {e}")
-        return error_response(message="获取性能统计失败", error_code=str(e))

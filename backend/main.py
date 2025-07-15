@@ -30,6 +30,7 @@ from app.utils.exceptions import (
 )
 from app.utils.helpers import ensure_directory
 from app.models import Base
+from app.services.mcp_unified_service import unified_service
 
 # 配置日志
 # 确保日志目录存在
@@ -60,11 +61,21 @@ async def lifespan(app: FastAPI):
         # 确保必要的目录存在
         ensure_directory(Path(settings.DATA_DIR))
         ensure_directory(Path(settings.LOGS_DIR))
-        ensure_directory(Path(settings.BACKUPS_DIR))
         
-        # 创建数据库表
-        Base.metadata.create_all(bind=engine)
-        logger.info("数据库初始化完成")
+        # 创建数据库表 - 由 alembic 管理
+        # Base.metadata.create_all(bind=engine)
+        logger.info("数据库连接初始化完成")
+        
+        # 初始化统一MCP服务
+        logger.info("初始化MCP统一服务...")
+        await unified_service.initialize()
+        
+        # 根据配置自动启动MCP服务
+        if settings.MCP_AUTO_START and unified_service.mode.value != "disabled":
+            logger.info("自动启动MCP服务...")
+            await unified_service.start_service()
+            status = await unified_service.get_service_status()
+            logger.info(f"MCP服务状态: 模式={status.mode.value}, 代理运行={status.proxy_running}, 服务端运行={status.server_running}")
         
         logger.info(f"MCPS.ONE 后端服务启动成功，监听端口: {settings.PORT}")
         
@@ -78,6 +89,13 @@ async def lifespan(app: FastAPI):
     logger.info("正在关闭 MCPS.ONE 后端服务...")
     
     try:
+        # 优雅关闭MCP服务
+        if unified_service.is_running:
+            logger.info("正在关闭MCP统一服务...")
+            if settings.MCP_GRACEFUL_SHUTDOWN:
+                await unified_service.stop_service()
+            logger.info("MCP统一服务已关闭")
+        
         logger.info("MCPS.ONE 后端服务已关闭")
     except Exception as e:
         logger.error(f"应用关闭时发生错误: {e}")
@@ -111,6 +129,10 @@ if settings.ALLOWED_HOSTS:
 
 # 注册 API 路由
 app.include_router(api_router)
+
+# 注册 WebSocket 路由
+from app.websocket import websocket_endpoint
+app.websocket("/ws")(websocket_endpoint)
 
 # 静态文件服务（如果需要）
 static_dir = Path("./static")

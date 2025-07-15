@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "python",
+      "args": [
+        "D:\\project\\MCPS.ONE\\backend\\start_mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "D:\\project\\MCPS.ONE\\backend"
+      }
+    }
+  }
+}

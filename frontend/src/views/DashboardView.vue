@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { NCard, NGrid, NGridItem, NStatistic, NProgress, NButton, NTag, NDataTable, NIcon } from 'naive-ui'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { NCard, NGrid, NGridItem, NStatistic, NProgress, NButton, NTag, NDataTable, NIcon, NSpin } from 'naive-ui'
 import {
   ServerOutline,
   StatsChartOutline,
@@ -9,10 +9,14 @@ import {
   ConstructOutline,
   WifiOutline,
   TvOutline,
-  SettingsOutline
+  SettingsOutline,
+  RefreshOutline
 } from '@vicons/ionicons5'
 import { systemApi, type SystemStats } from '../api/system'
 import { toolsApi, type Tool } from '../api/tools'
+import { sessionsApi } from '../api/sessions'
+import { tasksApi, type Task } from '../api/tasks'
+import { useWebSocketData, useWebSocketEvents, connectWebSocket, disconnectWebSocket, EventType } from '../services/websocket'
 
 // 响应式数据
 const systemStats = ref<SystemStats>({
@@ -33,11 +37,25 @@ const systemStats = ref<SystemStats>({
 })
 
 const toolsList = ref<Tool[]>([])
-const recentTasks = ref<any[]>([])
+const recentTasks = ref<Task[]>([])
 const loading = ref(true)
+const refreshing = ref(false)
+const autoRefresh = ref(true)
+const refreshInterval = ref<NodeJS.Timeout | null>(null)
+const lastUpdateTime = ref<Date>(new Date())
+
+// WebSocket 数据和事件
+const { status: wsStatus, systemStats: wsSystemStats, toolStatus: wsToolStatus } = useWebSocketData()
+const { addEventListener, removeEventListener } = useWebSocketEvents()
 
 // 获取系统统计信息
-const fetchSystemStats = async () => {
+const fetchSystemStats = async (showLoading = true) => {
+  if (showLoading) {
+    loading.value = true
+  } else {
+    refreshing.value = true
+  }
+  
   try {
     // 获取系统统计信息
     const stats = await systemApi.getStats()
@@ -48,28 +66,103 @@ const fetchSystemStats = async () => {
     const tools = toolsResponse.data?.items || []
     toolsList.value = tools.slice(0, 5)
     
-    // 模拟最近任务数据（后续可以从API获取）
-    recentTasks.value = [
-      {
-        id: 'task-001',
-        type: 'single_tool',
-        status: 'running',
-        tool: 'file-manager',
-        created_at: new Date().toISOString()
-      },
-      {
-        id: 'task-002',
-        type: 'multi_tool',
-        status: 'completed',
-        tool: 'web-scraper',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      }
-    ]
+    // 获取最近任务数据
+    const tasks = await tasksApi.getRecentTasks(5)
+    recentTasks.value = tasks
+    
+    // 更新最后更新时间
+    lastUpdateTime.value = new Date()
     
   } catch (error) {
     console.error('获取系统统计信息失败:', error)
   } finally {
     loading.value = false
+    refreshing.value = false
+  }
+}
+
+// WebSocket 数据更新处理
+watch(wsSystemStats, (newStats) => {
+  if (newStats) {
+    systemStats.value = newStats
+    lastUpdateTime.value = new Date()
+  }
+})
+
+watch(wsToolStatus, (newToolStatus) => {
+  if (newToolStatus && Array.isArray(newToolStatus)) {
+    // 更新工具列表（前5个）
+    toolsList.value = newToolStatus.slice(0, 5).map(tool => ({
+      id: tool.id,
+      name: tool.name,
+      status: tool.status,
+      description: '',
+      category: '',
+      tags: [],
+      created_at: '',
+      updated_at: '',
+      last_started: tool.last_started,
+      process_id: tool.process_id,
+      mcp_port: tool.mcp_port
+    }))
+    lastUpdateTime.value = new Date()
+  }
+})
+
+// 处理工具状态变更事件
+const handleToolStatusChange = (data: any) => {
+  console.log('工具状态变更:', data)
+  // 可以在这里添加通知或其他处理逻辑
+}
+
+
+
+// 手动刷新
+const handleRefresh = async () => {
+  await fetchSystemStats(false)
+}
+
+// 切换自动刷新
+const toggleAutoRefresh = () => {
+  autoRefresh.value = !autoRefresh.value
+  if (autoRefresh.value) {
+    startAutoRefresh()
+  } else {
+    stopAutoRefresh()
+  }
+}
+
+// 开始自动刷新
+const startAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+  }
+  refreshInterval.value = setInterval(() => {
+    if (autoRefresh.value) {
+      fetchSystemStats(false)
+    }
+  }, 30000) // 30秒刷新一次
+}
+
+// 停止自动刷新
+const stopAutoRefresh = () => {
+  if (refreshInterval.value) {
+    clearInterval(refreshInterval.value)
+    refreshInterval.value = null
+  }
+}
+
+// 格式化最后更新时间
+const formatLastUpdateTime = () => {
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - lastUpdateTime.value.getTime()) / 1000)
+  
+  if (diff < 60) {
+    return `${diff}秒前`
+  } else if (diff < 3600) {
+    return `${Math.floor(diff / 60)}分钟前`
+  } else {
+    return lastUpdateTime.value.toLocaleTimeString('zh-CN')
   }
 }
 
@@ -110,30 +203,90 @@ const formatTime = (timeStr: string) => {
 }
 
 // 组件挂载时获取数据
-onMounted(() => {
-  fetchSystemStats()
+onMounted(async () => {
+  // 初始化数据获取
+  await fetchSystemStats()
+  
+  // 连接 WebSocket
+  try {
+    await connectWebSocket()
+    console.log('WebSocket 连接成功')
+  } catch (error) {
+    console.error('WebSocket 连接失败，使用定时刷新模式:', error)
+    startAutoRefresh()
+  }
+  
+  // 添加事件监听器
+  addEventListener(EventType.TOOL_STATUS_CHANGE, handleToolStatusChange)
+})
+
+// 组件卸载时清理资源
+onUnmounted(() => {
+  stopAutoRefresh()
+  
+  // 移除事件监听器
+  removeEventListener(EventType.TOOL_STATUS_CHANGE, handleToolStatusChange)
+  
+  // 断开 WebSocket 连接
+  disconnectWebSocket()
 })
 </script>
 
 <template>
   <div class="dashboard">
     <div class="dashboard-header">
-      <h1>MCPS.ONE 控制台</h1>
-      <p>MCP 工具管理和代理服务平台</p>
+      <div class="header-content">
+        <div class="header-text">
+          <h1>🏠 MCPS.ONE 首页</h1>
+          <p>简洁、面向个人使用的 MCP 工具后台管理面板</p>
+        </div>
+        <div class="header-controls">
+          <div class="update-info">
+            <span class="update-time">最后更新: {{ formatLastUpdateTime() }}</span>
+            <n-tag :type="autoRefresh ? 'success' : 'default'" size="small">
+              {{ autoRefresh ? '自动刷新' : '手动刷新' }}
+            </n-tag>
+          </div>
+          <div class="control-buttons">
+            <n-button 
+              :loading="refreshing" 
+              @click="handleRefresh" 
+              size="small" 
+              type="primary" 
+              ghost
+              data-testid="refresh-button"
+            >
+              <template #icon>
+                <n-icon><RefreshOutline /></n-icon>
+              </template>
+              刷新
+            </n-button>
+            <n-button 
+              @click="toggleAutoRefresh" 
+              size="small" 
+              :type="autoRefresh ? 'success' : 'default'"
+              ghost
+            >
+              {{ autoRefresh ? '关闭自动' : '开启自动' }}
+            </n-button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- 统计卡片 -->
+    <!-- 核心统计卡片 -->
     <n-grid :cols="4" :x-gap="24" :y-gap="24" class="stats-row">
       <n-grid-item>
         <n-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon">
-              <n-icon :size="32" color="#409EFF">
+              <n-icon :size="32" color="#67C23A">
                 <ConstructOutline />
               </n-icon>
             </div>
             <div class="stat-info">
-              <n-statistic label="总工具数" :value="systemStats.totalTools" />
+              <n-statistic label="运行中的 MCP 工具" :value="systemStats.activeTools" />
+              <div class="stat-subtitle">共 {{ systemStats.totalTools }} 个工具</div>
             </div>
           </div>
         </n-card>
@@ -143,12 +296,13 @@ onMounted(() => {
         <n-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon">
-              <n-icon :size="32" color="#67C23A">
-                <WifiOutline />
+              <n-icon :size="32" color="#409EFF">
+                <TvOutline />
               </n-icon>
             </div>
             <div class="stat-info">
-              <n-statistic label="活跃工具" :value="systemStats.activeTools" />
+              <n-statistic label="代理请求总数" :value="systemStats.totalTasks" />
+              <div class="stat-subtitle">成功 {{ systemStats.completedTasks }} | 失败 {{ systemStats.failedTasks }}</div>
             </div>
           </div>
         </n-card>
@@ -159,11 +313,12 @@ onMounted(() => {
           <div class="stat-content">
             <div class="stat-icon">
               <n-icon :size="32" color="#E6A23C">
-                <TvOutline />
+                <TimeOutline />
               </n-icon>
             </div>
             <div class="stat-info">
-              <n-statistic label="活跃会话" :value="systemStats.activeSessions" />
+              <n-statistic label="当前活跃会话" :value="systemStats.activeSessions" />
+              <div class="stat-subtitle">总会话 {{ systemStats.totalSessions }}</div>
             </div>
           </div>
         </n-card>
@@ -173,38 +328,40 @@ onMounted(() => {
         <n-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon">
-              <n-icon :size="32" color="#F56C6C">
-                <SettingsOutline />
+              <n-icon :size="32" color="#67C23A">
+                <CheckmarkCircleOutline />
               </n-icon>
             </div>
             <div class="stat-info">
-              <n-statistic label="总任务数" :value="systemStats.totalTasks" />
+              <n-statistic label="系统状态" value="在线" />
+              <div class="stat-subtitle">运行时间 {{ systemStats.systemUptime || '未知' }}</div>
             </div>
           </div>
         </n-card>
       </n-grid-item>
     </n-grid>
 
-    <!-- 工具状态和最近任务 -->
+    <!-- 工具状态和最近调用记录 -->
     <n-grid :cols="2" :x-gap="24" :y-gap="24" class="content-row">
       <!-- 工具状态 -->
       <n-grid-item>
         <n-card>
           <template #header>
             <div class="card-header">
-              <span>工具状态</span>
+              <span>🔧 MCP 工具状态</span>
               <n-button type="primary" size="small" @click="$router.push('/tools')">
-                查看全部
+                管理工具
               </n-button>
             </div>
           </template>
           
           <div v-if="loading" class="loading-state">
+            <n-spin size="small" />
             <p>加载中...</p>
           </div>
           <div v-else>
             <div v-if="toolsList.length === 0" class="empty-state">
-              <p>暂无工具数据</p>
+              <p>暂无工具，<router-link to="/tools">点击添加</router-link></p>
             </div>
             <div v-else>
               <div v-for="tool in toolsList" :key="tool.name" class="tool-item">
@@ -214,8 +371,8 @@ onMounted(() => {
                     {{ getToolStatusText(tool.status) }}
                   </n-tag>
                 </div>
-                <div class="tool-description">
-                  {{ tool.description || '暂无描述' }}
+                <div class="tool-meta">
+                  <span class="tool-time">{{ tool.last_started ? '最后启动: ' + formatTime(tool.last_started) : '未启动' }}</span>
                 </div>
               </div>
             </div>
@@ -223,42 +380,37 @@ onMounted(() => {
         </n-card>
       </n-grid-item>
       
-      <!-- 最近任务 -->
+      <!-- 最近调用记录 -->
       <n-grid-item>
         <n-card>
           <template #header>
             <div class="card-header">
-              <span>最近任务</span>
-              <n-button type="primary" size="small" @click="$router.push('/monitor')">
+              <span>📋 最近调用记录</span>
+              <n-button type="primary" size="small" @click="$router.push('/proxy/sessions')">
                 查看全部
               </n-button>
             </div>
           </template>
           
           <div v-if="loading" class="loading-state">
+            <n-spin size="small" />
             <p>加载中...</p>
           </div>
           <div v-else>
             <div v-if="recentTasks.length === 0" class="empty-state">
-              <p>暂无任务记录</p>
+              <p>暂无调用记录</p>
             </div>
             <div v-else>
-              <div v-for="task in recentTasks" :key="task.id" class="task-item">
-                <div class="task-header">
-                  <span class="task-id">{{ task.id }}</span>
+              <div v-for="task in recentTasks" :key="task.id" class="call-item">
+                <div class="call-info">
+                  <span class="call-tool">{{ task.tool_name || task.name }}</span>
                   <n-tag :type="getTaskStatusColor(task.status)" size="small">
-                    {{ task.status === 'running' ? '运行中' : 
-                        task.status === 'completed' ? '已完成' : 
-                        task.status === 'failed' ? '失败' : 
-                        task.status === 'pending' ? '等待中' : '未知' }}
+                    {{ task.status === 'success' ? '成功' : task.status === 'failed' ? '失败' : '进行中' }}
                   </n-tag>
                 </div>
-                <div class="task-details">
-                  <span class="task-type">类型: {{ task.type }}</span>
-                  <span class="task-tool">工具: {{ task.tool }}</span>
-                </div>
-                <div class="task-time">
-                  {{ formatTime(task.created_at) }}
+                <div class="call-meta">
+                  <span class="call-type">{{ task.request_type || '工具调用' }}</span>
+                  <span class="call-time">{{ formatTime(task.created_at || task.timestamp) }}</span>
                 </div>
               </div>
             </div>
@@ -290,12 +442,7 @@ onMounted(() => {
               代理服务
             </n-button>
             
-            <n-button type="warning" @click="$router.push('/monitor')">
-              <template #icon>
-                <n-icon><TvOutline /></n-icon>
-              </template>
-              系统监控
-            </n-button>
+
             
             <n-button type="info" @click="$router.push('/settings')">
               <template #icon>
@@ -318,7 +465,6 @@ onMounted(() => {
 
 .dashboard-header {
   margin-bottom: 32px;
-  text-align: center;
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
@@ -326,17 +472,66 @@ onMounted(() => {
   box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
 }
 
-.dashboard-header h1 {
-  margin: 0 0 12px 0;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.header-text {
+  text-align: left;
+}
+
+.header-text h1 {
+  margin: 0 0 8px 0;
   font-size: 32px;
   color: white;
   font-weight: 600;
 }
 
-.dashboard-header p {
+.header-text p {
   margin: 0;
   color: rgba(255, 255, 255, 0.9);
   font-size: 16px;
+}
+
+.header-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.update-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.update-time {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.control-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .header-text {
+    text-align: center;
+  }
+  
+  .header-controls {
+    align-items: center;
+  }
 }
 
 .stats-row {
@@ -352,7 +547,6 @@ onMounted(() => {
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
@@ -414,47 +608,50 @@ onMounted(() => {
   color: #303133;
 }
 
-.tool-description {
+.tool-meta {
   font-size: 12px;
+  color: #606266;
+  margin-top: 4px;
+}
+
+.tool-time {
   color: #909399;
 }
 
-.task-item {
+.call-item {
   padding: 12px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.task-item:last-child {
+.call-item:last-child {
   border-bottom: none;
 }
 
-.task-header {
+.call-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
 }
 
-.task-id {
+.call-tool {
   font-weight: 500;
   color: #303133;
-  font-size: 14px;
 }
 
-.task-details {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 4px;
-}
-
-.task-type,
-.task-tool {
+.call-meta {
   font-size: 12px;
   color: #606266;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }
 
-.task-time {
-  font-size: 12px;
+.call-type {
+  color: #909399;
+}
+
+.call-time {
   color: #909399;
 }
 
@@ -478,7 +675,7 @@ onMounted(() => {
 }
 
 .quick-actions .n-button:hover {
-  transform: translateY(-2px);
+  /* 移除悬浮动画效果 */
 }
 
 .quick-actions .el-button {

@@ -13,8 +13,10 @@ import asyncio
 import time
 from pathlib import Path
 
-from app.models.system import SystemConfig, SystemInfo, DatabaseBackup
+from app.models.system import SystemConfig, SystemInfo
 from app.models.tool import MCPTool, ToolStatus
+from app.models.session import MCPSession, SessionStatus
+from app.models.task import MCPTask, TaskStatus
 from app.schemas.system import (
     SystemConfigCreate,
     SystemConfigUpdate,
@@ -476,24 +478,123 @@ class SystemService:
             active_tools = self.db.query(MCPTool).filter(
                 MCPTool.status == ToolStatus.RUNNING
             ).count()
+            stopped_tools = self.db.query(MCPTool).filter(
+                MCPTool.status == ToolStatus.STOPPED
+            ).count()
+            error_tools = self.db.query(MCPTool).filter(
+                MCPTool.status == ToolStatus.ERROR
+            ).count()
             
-            # 系统资源
+            # 会话统计
+            total_sessions = self.db.query(MCPSession).count()
+            active_sessions = self.db.query(MCPSession).filter(
+                MCPSession.status == SessionStatus.ACTIVE
+            ).count()
+            inactive_sessions = self.db.query(MCPSession).filter(
+                MCPSession.status == SessionStatus.INACTIVE
+            ).count()
+            expired_sessions = self.db.query(MCPSession).filter(
+                MCPSession.status == SessionStatus.EXPIRED
+            ).count()
+            
+            # 任务统计
+            total_tasks = self.db.query(MCPTask).count()
+            pending_tasks = self.db.query(MCPTask).filter(
+                MCPTask.status == TaskStatus.PENDING
+            ).count()
+            running_tasks = self.db.query(MCPTask).filter(
+                MCPTask.status == TaskStatus.RUNNING
+            ).count()
+            completed_tasks = self.db.query(MCPTask).filter(
+                MCPTask.status == TaskStatus.COMPLETED
+            ).count()
+            failed_tasks = self.db.query(MCPTask).filter(
+                MCPTask.status == TaskStatus.FAILED
+            ).count()
+            cancelled_tasks = self.db.query(MCPTask).filter(
+                MCPTask.status == TaskStatus.CANCELLED
+            ).count()
+            
+            # 系统资源详细信息
             cpu_percent = psutil.cpu_percent(interval=1)
+            cpu_count = psutil.cpu_count()
+            cpu_count_logical = psutil.cpu_count(logical=True)
+            
             memory = psutil.virtual_memory()
+            swap = psutil.swap_memory()
+            
+            # 磁盘信息
             disk = psutil.disk_usage('/')
             
-            # 模拟会话和任务数据（实际项目中应该从相应的表中获取）
-            active_sessions = 5  # 这里应该从会话表中获取
-            total_tasks = 150    # 这里应该从任务表中获取
+            # 网络信息
+            network = psutil.net_io_counters()
+            
+            # 系统运行时间
+            uptime_seconds = self._get_uptime()
+            
+            # 进程信息
+            process = psutil.Process()
+            app_memory = process.memory_info()
             
             return {
-                "activeSessions": active_sessions,
-                "totalTasks": total_tasks,
+                # 工具统计
                 "totalTools": total_tools,
                 "activeTools": active_tools,
+                "stoppedTools": stopped_tools,
+                "errorTools": error_tools,
+                
+                # 会话统计
+                "totalSessions": total_sessions,
+                "activeSessions": active_sessions,
+                "inactiveSessions": inactive_sessions,
+                "expiredSessions": expired_sessions,
+                
+                # 任务统计
+                "totalTasks": total_tasks,
+                "pendingTasks": pending_tasks,
+                "runningTasks": running_tasks,
+                "completedTasks": completed_tasks,
+                "failedTasks": failed_tasks,
+                "cancelledTasks": cancelled_tasks,
+                
+                # CPU 信息
                 "cpuUsage": round(cpu_percent, 1),
+                "cpuCount": cpu_count,
+                "cpuCountLogical": cpu_count_logical,
+                
+                # 内存信息
                 "memoryUsage": round(memory.percent, 1),
+                "memoryTotal": memory.total,
+                "memoryUsed": memory.used,
+                "memoryAvailable": memory.available,
+                "swapUsage": round(swap.percent, 1) if swap.total > 0 else 0,
+                "swapTotal": swap.total,
+                "swapUsed": swap.used,
+                
+                # 磁盘信息
                 "diskUsage": round((disk.used / disk.total) * 100, 1),
+                "diskTotal": disk.total,
+                "diskUsed": disk.used,
+                "diskFree": disk.free,
+                
+                # 网络信息
+                "networkBytesSent": network.bytes_sent,
+                "networkBytesRecv": network.bytes_recv,
+                "networkPacketsSent": network.packets_sent,
+                "networkPacketsRecv": network.packets_recv,
+                
+                # 应用信息
+                "appMemoryRss": app_memory.rss,
+                "appMemoryVms": app_memory.vms,
+                "appCpuPercent": round(process.cpu_percent(), 1),
+                "appThreads": process.num_threads(),
+                
+                # 系统信息
+                "systemUptime": uptime_seconds,
+                "systemUptimeFormatted": self._format_uptime(uptime_seconds),
+                "platform": platform.platform(),
+                "pythonVersion": platform.python_version(),
+                
                 "timestamp": datetime.utcnow().isoformat()
             }
             
@@ -501,49 +602,7 @@ class SystemService:
             logger.error(f"获取系统统计失败: {e}")
             raise
     
-    def get_performance_stats(self) -> Dict[str, Any]:
-        """获取性能统计"""
-        try:
-            # 进程信息
-            process = psutil.Process()
-            
-            # 应用性能
-            app_stats = {
-                "cpu_percent": process.cpu_percent(),
-                "memory_info": process.memory_info()._asdict(),
-                "memory_percent": process.memory_percent(),
-                "num_threads": process.num_threads(),
-                "num_fds": process.num_fds() if hasattr(process, 'num_fds') else None,
-                "create_time": process.create_time(),
-            }
-            
-            # 数据库统计
-            db_stats = {
-                "total_tools": self.db.query(MCPTool).count(),
-                "total_configs": self.db.query(SystemConfig).count(),
-                "total_backups": self.db.query(DatabaseBackup).count(),
-            }
-            
-            # 文件系统统计
-            data_dir = Path(settings.DATA_DIR)
-            if data_dir.exists():
-                file_stats = {
-                    "data_dir_size": sum(f.stat().st_size for f in data_dir.rglob('*') if f.is_file()),
-                    "log_files": len(list(Path(settings.LOG_DIR).glob('*.log'))) if Path(settings.LOG_DIR).exists() else 0,
-                }
-            else:
-                file_stats = {"data_dir_size": 0, "log_files": 0}
-            
-            return {
-                "application": app_stats,
-                "database": db_stats,
-                "filesystem": file_stats,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"获取性能统计失败: {e}")
-            raise
+
     
     def create_operation(self, operation_data: SystemOperationCreate):
         """创建系统操作记录"""
@@ -596,6 +655,25 @@ class SystemService:
             return time.time() - psutil.boot_time()
         except Exception:
             return 0.0
+    
+    def _format_uptime(self, uptime_seconds: float) -> str:
+        """格式化运行时间显示"""
+        try:
+            days = int(uptime_seconds // 86400)
+            hours = int((uptime_seconds % 86400) // 3600)
+            minutes = int((uptime_seconds % 3600) // 60)
+            seconds = int(uptime_seconds % 60)
+            
+            if days > 0:
+                return f"{days}天 {hours}小时 {minutes}分钟"
+            elif hours > 0:
+                return f"{hours}小时 {minutes}分钟"
+            elif minutes > 0:
+                return f"{minutes}分钟 {seconds}秒"
+            else:
+                return f"{seconds}秒"
+        except Exception:
+            return "未知"
     
     def _check_database(self) -> Dict[str, Any]:
         """检查数据库连接"""
@@ -777,30 +855,7 @@ class SystemService:
             raise
     
     # 系统测试
-    def test_database_connection(self) -> Dict[str, Any]:
-        """测试数据库连接"""
-        try:
-            # 执行简单查询测试连接
-            self.db.execute("SELECT 1")
-            
-            # 获取数据库信息
-            db_info = self.db.execute("SELECT version()")
-            version = db_info.scalar() if db_info else "Unknown"
-            
-            return {
-                "success": True,
-                "message": "数据库连接正常",
-                "version": version,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            
-        except Exception as e:
-            logger.error(f"数据库连接测试失败: {e}")
-            return {
-                "success": False,
-                "message": f"数据库连接失败: {e}",
-                "timestamp": datetime.utcnow().isoformat()
-            }
+
     
     def test_email_notification(self, email: str) -> Dict[str, Any]:
         """测试邮件通知"""

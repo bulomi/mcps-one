@@ -36,6 +36,10 @@ websockets==12.0
 # JSON-RPC support
 jsonrpclib-pelix==0.4.3.2
 
+# MCP Protocol support
+fastmcp==0.2.0
+mcp==1.0.0
+
 # Process management
 psutil==5.9.6
 watchdog==3.0.0

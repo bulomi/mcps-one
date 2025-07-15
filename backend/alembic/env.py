@@ -32,7 +32,8 @@ target_metadata = Base.metadata
 
 def get_url():
     """获取数据库连接URL"""
-    return settings.DATABASE_URL
+    # 使用 alembic.ini 中的配置
+    return config.get_main_option("sqlalchemy.url")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

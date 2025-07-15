@@ -89,109 +89,9 @@
           </n-form>
         </n-card>
         
-        <!-- 数据库设置 -->
-        <n-card v-if="activeCategory === 'database'" title="数据库设置" class="settings-card">
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="数据库类型">
-              <n-select
-                v-model:value="databaseSettings.type"
-                :options="databaseTypeOptions"
-                placeholder="选择数据库类型"
-              />
-            </n-form-item>
-            <n-form-item label="连接地址">
-              <n-input v-model:value="databaseSettings.host" placeholder="数据库主机地址" />
-            </n-form-item>
-            <n-form-item label="端口">
-              <n-input-number v-model:value="databaseSettings.port" :min="1" :max="65535" />
-            </n-form-item>
-            <n-form-item label="数据库名">
-              <n-input v-model:value="databaseSettings.database" placeholder="数据库名称" />
-            </n-form-item>
-            <n-form-item label="用户名">
-              <n-input v-model:value="databaseSettings.username" placeholder="数据库用户名" />
-            </n-form-item>
-            <n-form-item label="密码">
-              <n-input
-                v-model:value="databaseSettings.password"
-                type="password"
-                placeholder="数据库密码"
-                show-password-on="click"
-              />
-            </n-form-item>
-            <n-form-item label="连接池大小">
-              <n-input-number v-model:value="databaseSettings.poolSize" :min="1" :max="100" />
-            </n-form-item>
-            <n-form-item label="自动备份">
-              <n-switch v-model:value="databaseSettings.autoBackup" />
-            </n-form-item>
-            <n-form-item label="备份间隔(小时)" v-if="databaseSettings.autoBackup">
-              <n-input-number v-model:value="databaseSettings.backupInterval" :min="1" :max="168" />
-            </n-form-item>
-          </n-form>
-          
-          <n-divider />
-          
-          <div class="database-actions">
-            <n-space>
-              <n-button @click="testDatabaseConnection" :loading="testingConnection">
-                <template #icon>
-                  <n-icon><CheckmarkCircleOutline /></n-icon>
-                </template>
-                测试连接
-              </n-button>
-              <n-button @click="createBackup" :loading="creatingBackup">
-                <template #icon>
-                  <n-icon><ArchiveOutline /></n-icon>
-                </template>
-                立即备份
-              </n-button>
-              <n-button @click="showBackupList = true">
-                <template #icon>
-                  <n-icon><FolderOpenOutline /></n-icon>
-                </template>
-                备份管理
-              </n-button>
-            </n-space>
-          </div>
-        </n-card>
+
         
-        <!-- 安全设置 -->
-        <n-card v-if="activeCategory === 'security'" title="安全设置" class="settings-card">
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="启用认证">
-              <n-switch v-model:value="securitySettings.enableAuth" />
-            </n-form-item>
-            <n-form-item label="会话超时(分钟)" v-if="securitySettings.enableAuth">
-              <n-input-number v-model:value="securitySettings.sessionTimeout" :min="5" :max="1440" />
-            </n-form-item>
-            <n-form-item label="密码复杂度" v-if="securitySettings.enableAuth">
-              <n-select
-                v-model:value="securitySettings.passwordComplexity"
-                :options="passwordComplexityOptions"
-                placeholder="选择密码复杂度"
-              />
-            </n-form-item>
-            <n-form-item label="启用双因子认证" v-if="securitySettings.enableAuth">
-              <n-switch v-model:value="securitySettings.enable2FA" />
-            </n-form-item>
-            <n-form-item label="API访问控制">
-              <n-switch v-model:value="securitySettings.apiAccessControl" />
-            </n-form-item>
-            <n-form-item label="允许的IP地址" v-if="securitySettings.apiAccessControl">
-              <n-dynamic-tags v-model:value="securitySettings.allowedIPs" />
-            </n-form-item>
-            <n-form-item label="启用HTTPS">
-              <n-switch v-model:value="securitySettings.enableHTTPS" />
-            </n-form-item>
-            <n-form-item label="SSL证书路径" v-if="securitySettings.enableHTTPS">
-              <n-input v-model:value="securitySettings.sslCertPath" placeholder="SSL证书文件路径" />
-            </n-form-item>
-            <n-form-item label="SSL私钥路径" v-if="securitySettings.enableHTTPS">
-              <n-input v-model:value="securitySettings.sslKeyPath" placeholder="SSL私钥文件路径" />
-            </n-form-item>
-          </n-form>
-        </n-card>
+
         
         <!-- 通知设置 -->
         <n-card v-if="activeCategory === 'notification'" title="通知设置" class="settings-card">
@@ -262,43 +162,7 @@
           </div>
         </n-card>
         
-        <!-- 性能设置 -->
-        <n-card v-if="activeCategory === 'performance'" title="性能设置" class="settings-card">
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="最大并发连接数">
-              <n-input-number v-model:value="performanceSettings.maxConnections" :min="1" :max="10000" />
-            </n-form-item>
-            <n-form-item label="请求超时时间(秒)">
-              <n-input-number v-model:value="performanceSettings.requestTimeout" :min="1" :max="300" />
-            </n-form-item>
-            <n-form-item label="工作进程数">
-              <n-input-number v-model:value="performanceSettings.workerProcesses" :min="1" :max="32" />
-            </n-form-item>
-            <n-form-item label="启用缓存">
-              <n-switch v-model:value="performanceSettings.enableCache" />
-            </n-form-item>
-            <n-form-item label="缓存过期时间(秒)" v-if="performanceSettings.enableCache">
-              <n-input-number v-model:value="performanceSettings.cacheExpiration" :min="60" :max="86400" />
-            </n-form-item>
-            <n-form-item label="启用压缩">
-              <n-switch v-model:value="performanceSettings.enableCompression" />
-            </n-form-item>
-            <n-form-item label="压缩级别" v-if="performanceSettings.enableCompression">
-              <n-slider
-                v-model:value="performanceSettings.compressionLevel"
-                :min="1"
-                :max="9"
-                :marks="{ 1: '最快', 5: '平衡', 9: '最小' }"
-              />
-            </n-form-item>
-            <n-form-item label="启用监控">
-              <n-switch v-model:value="performanceSettings.enableMonitoring" />
-            </n-form-item>
-            <n-form-item label="监控间隔(秒)" v-if="performanceSettings.enableMonitoring">
-              <n-input-number v-model:value="performanceSettings.monitoringInterval" :min="1" :max="3600" />
-            </n-form-item>
-          </n-form>
-        </n-card>
+
         
         <!-- 高级设置 -->
         <n-card v-if="activeCategory === 'advanced'" title="高级设置" class="settings-card">
@@ -483,14 +347,11 @@ const message = useMessage()
 // 响应式数据
 const saving = ref(false)
 const importing = ref(false)
-const testingConnection = ref(false)
-const creatingBackup = ref(false)
 const testingEmail = ref(false)
 const testingWebhook = ref(false)
-const loadingBackups = ref(false)
 const activeCategory = ref('basic')
 const showImportModal = ref(false)
-const showBackupList = ref(false)
+
 const showSystemInfo = ref(false)
 const fileList = ref<UploadFileInfo[]>([])
 
@@ -501,26 +362,13 @@ const categoryOptions: MenuOption[] = [
     key: 'basic',
     icon: () => h(NIcon, null, { default: () => h('div', '⚙️') })
   },
-  {
-    label: '数据库设置',
-    key: 'database',
-    icon: () => h(NIcon, null, { default: () => h('div', '🗄️') })
-  },
-  {
-    label: '安全设置',
-    key: 'security',
-    icon: () => h(NIcon, null, { default: () => h('div', '🔒') })
-  },
+
   {
     label: '通知设置',
     key: 'notification',
     icon: () => h(NIcon, null, { default: () => h('div', '🔔') })
   },
-  {
-    label: '性能设置',
-    key: 'performance',
-    icon: () => h(NIcon, null, { default: () => h('div', '⚡') })
-  },
+
   {
     label: '高级设置',
     key: 'advanced',
@@ -538,31 +386,7 @@ const basicSettings = ref({
   timezone: 'Asia/Shanghai'
 })
 
-// 数据库设置
-const databaseSettings = ref({
-  type: 'sqlite',
-  host: 'localhost',
-  port: 5432,
-  database: 'mcps',
-  username: '',
-  password: '',
-  poolSize: 10,
-  autoBackup: true,
-  backupInterval: 24
-})
 
-// 安全设置
-const securitySettings = ref({
-  enableAuth: false,
-  sessionTimeout: 30,
-  passwordComplexity: 'medium',
-  enable2FA: false,
-  apiAccessControl: false,
-  allowedIPs: [] as string[],
-  enableHTTPS: false,
-  sslCertPath: '',
-  sslKeyPath: ''
-})
 
 // 通知设置
 const notificationSettings = ref({
@@ -577,18 +401,7 @@ const notificationSettings = ref({
   events: [] as string[]
 })
 
-// 性能设置
-const performanceSettings = ref({
-  maxConnections: 1000,
-  requestTimeout: 30,
-  workerProcesses: 4,
-  enableCache: true,
-  cacheExpiration: 3600,
-  enableCompression: true,
-  compressionLevel: 6,
-  enableMonitoring: true,
-  monitoringInterval: 60
-})
+
 
 // 高级设置
 const advancedSettings = ref({
@@ -602,13 +415,7 @@ const advancedSettings = ref({
   cleanupStrategy: 'auto'
 })
 
-// 备份列表
-const backupList = ref([])
-const backupPagination = ref({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0
-})
+
 
 // 系统信息
 const systemInfo = ref({
@@ -657,18 +464,7 @@ const timezoneOptions = [
   { label: '伦敦时间 (UTC+0)', value: 'Europe/London' }
 ]
 
-const databaseTypeOptions = [
-  { label: 'SQLite', value: 'sqlite' },
-  { label: 'PostgreSQL', value: 'postgresql' },
-  { label: 'MySQL', value: 'mysql' },
-  { label: 'SQL Server', value: 'mssql' }
-]
 
-const passwordComplexityOptions = [
-  { label: '简单 (6位以上)', value: 'simple' },
-  { label: '中等 (8位+数字+字母)', value: 'medium' },
-  { label: '复杂 (12位+数字+字母+符号)', value: 'complex' }
-]
 
 const cleanupStrategyOptions = [
   { label: '自动清理', value: 'auto' },
@@ -676,51 +472,7 @@ const cleanupStrategyOptions = [
   { label: '定时清理', value: 'scheduled' }
 ]
 
-// 备份表格列定义
-const backupColumns: DataTableColumns = [
-  {
-    title: '备份名称',
-    key: 'name'
-  },
-  {
-    title: '创建时间',
-    key: 'created_at'
-  },
-  {
-    title: '文件大小',
-    key: 'size'
-  },
-  {
-    title: '状态',
-    key: 'status',
-    render(row: any) {
-      return h('span', {
-        style: {
-          color: row.status === 'success' ? '#18a058' : '#d03050'
-        }
-      }, row.status === 'success' ? '成功' : '失败')
-    }
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    render(row: any) {
-      return h(NSpace, null, {
-        default: () => [
-          h(NButton, {
-            size: 'small',
-            onClick: () => downloadBackup(row.id)
-          }, { default: () => '下载' }),
-          h(NButton, {
-            size: 'small',
-            type: 'error',
-            onClick: () => deleteBackup(row.id)
-          }, { default: () => '删除' })
-        ]
-      })
-    }
-  }
-]
+
 
 // 方法
 const handleCategoryChange = (key: string) => {
@@ -733,10 +485,7 @@ const saveAllSettings = async () => {
     // 保存所有设置到后端
     const allSettings = {
       basic: basicSettings.value,
-      database: databaseSettings.value,
-      security: securitySettings.value,
       notification: notificationSettings.value,
-      performance: performanceSettings.value,
       advanced: advancedSettings.value
     }
     
@@ -755,10 +504,7 @@ const exportSettings = async () => {
   try {
     const allSettings = {
       basic: basicSettings.value,
-      database: databaseSettings.value,
-      security: securitySettings.value,
       notification: notificationSettings.value,
-      performance: performanceSettings.value,
       advanced: advancedSettings.value
     }
     
@@ -802,10 +548,7 @@ const importSettings = async () => {
       
       // 应用导入的设置
       if (settings.basic) basicSettings.value = { ...basicSettings.value, ...settings.basic }
-      if (settings.database) databaseSettings.value = { ...databaseSettings.value, ...settings.database }
-      if (settings.security) securitySettings.value = { ...securitySettings.value, ...settings.security }
       if (settings.notification) notificationSettings.value = { ...notificationSettings.value, ...settings.notification }
-      if (settings.performance) performanceSettings.value = { ...performanceSettings.value, ...settings.performance }
       if (settings.advanced) advancedSettings.value = { ...advancedSettings.value, ...settings.advanced }
       
       message.success('设置导入成功')
@@ -820,37 +563,7 @@ const importSettings = async () => {
   }
 }
 
-const testDatabaseConnection = async () => {
-  testingConnection.value = true
-  try {
-    await systemApi.testDatabaseConnection(databaseSettings.value)
-    
-    message.success('数据库连接测试成功')
-  } catch (error) {
-    console.error('数据库连接测试失败:', error)
-    message.error('数据库连接测试失败')
-  } finally {
-    testingConnection.value = false
-  }
-}
 
-const createBackup = async () => {
-  creatingBackup.value = true
-  try {
-    await systemApi.createBackup({
-      name: `backup_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}`,
-      description: '手动创建的备份'
-    })
-    
-    message.success('数据库备份创建成功')
-    loadBackupList()
-  } catch (error) {
-    console.error('创建备份失败:', error)
-    message.error('创建备份失败')
-  } finally {
-    creatingBackup.value = false
-  }
-}
 
 const testEmailNotification = async () => {
   testingEmail.value = true
@@ -912,35 +625,7 @@ const clearCache = async () => {
   }
 }
 
-const downloadBackup = async (id: string) => {
-  try {
-    const blob = await systemApi.downloadBackup(id)
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `backup-${id}.sql`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    
-    message.success('备份文件下载成功')
-  } catch (error) {
-    console.error('下载备份失败:', error)
-    message.error('下载备份失败')
-  }
-}
 
-const deleteBackup = async (id: string) => {
-  try {
-    await systemApi.deleteBackup(id)
-    message.success('备份文件删除成功')
-    loadBackupList()
-  } catch (error) {
-    console.error('删除备份失败:', error)
-    message.error('删除备份失败')
-  }
-}
 
 const loadSystemInfo = async () => {
   try {
@@ -952,29 +637,14 @@ const loadSystemInfo = async () => {
   }
 }
 
-const loadBackupList = async () => {
-   loadingBackups.value = true
-   try {
-     const backups = await systemApi.getBackups()
-     backupList.value = backups
-     backupPagination.value.itemCount = backups.length
-   } catch (error) {
-     console.error('获取备份列表失败:', error)
-     message.error('获取备份列表失败')
-   } finally {
-     loadingBackups.value = false
-   }
- }
+
 
 const loadSettings = async () => {
    try {
      const settings = await systemApi.exportSettings()
      
      if (settings.basic) basicSettings.value = settings.basic
-     if (settings.database) databaseSettings.value = settings.database
-     if (settings.security) securitySettings.value = settings.security
      if (settings.notification) notificationSettings.value = settings.notification
-     if (settings.performance) performanceSettings.value = settings.performance
      if (settings.advanced) advancedSettings.value = settings.advanced
    } catch (error) {
      console.error('加载设置失败:', error)
@@ -986,7 +656,6 @@ const loadSettings = async () => {
 onMounted(() => {
   loadSettings()
   loadSystemInfo()
-  loadBackupList()
 })
 </script>
 
@@ -1078,7 +747,7 @@ onMounted(() => {
 }
 
 .n-button:hover {
-  transform: translateY(-1px);
+  /* 移除悬浮动画效果 */
 }
 
 .n-form-item {

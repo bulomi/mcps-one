@@ -109,27 +109,47 @@ body {
   background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
 }
 
-/* 全局动画 */
+/* 全局动画 - 禁用过度动画效果 */
 * {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 卡片阴影动画 */
+/* 禁用 Naive UI 组件的动画效果 */
+:deep(.n-tooltip),
+:deep(.n-popover),
+:deep(.n-dropdown-menu),
+:deep(.n-select-menu),
+:deep(.n-cascader-menu),
+:deep(.n-auto-complete-menu),
+:deep(.n-mention-menu),
+:deep(.n-time-picker-menu),
+:deep(.n-date-picker-menu) {
+  animation: none !important;
+  transition: opacity 0.1s ease !important;
+  transform: none !important;
+}
+
+/* 禁用所有弹出层的位移动画 */
+:deep([data-v-binder-follower]) {
+  animation: none !important;
+  transition: opacity 0.1s ease !important;
+  transform: none !important;
+}
+
+/* 卡片阴影效果 */
 .card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 
-/* 按钮动画 */
+/* 按钮效果 */
 .btn-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-hover:hover {
-  transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }

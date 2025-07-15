@@ -48,6 +48,11 @@
                   </template>
                 </n-button>
               </n-badge>
+              <n-button quaternary circle @click="feedbackRef?.openFeedback()">
+                <template #icon>
+                  <n-icon><ChatbubbleEllipsesOutline /></n-icon>
+                </template>
+              </n-button>
               <n-dropdown :options="userOptions" @select="handleUserAction">
                 <n-button quaternary circle>
                   <template #icon>
@@ -68,6 +73,9 @@
       </n-layout-content>
     </n-layout>
   </n-layout>
+  
+  <!-- 用户反馈组件 -->
+  <UserFeedback ref="feedbackRef" hide-button />
 </template>
 
 <script setup lang="ts">
@@ -98,21 +106,38 @@ import {
   NotificationsOutline,
   PersonOutline,
   LogOutOutline,
-  SettingsSharp
+  SettingsSharp,
+  WarningOutline,
+  ChatbubbleEllipsesOutline
 } from '@vicons/ionicons5'
+import UserFeedback from '@/components/UserFeedback.vue'
 
 const router = useRouter()
 const route = useRoute()
 
 // 侧边栏折叠状态
 const collapsed = ref(false)
+const feedbackRef = ref()
 
 // 当前激活的菜单项
 const activeKey = computed(() => route.name as string)
 
 // 当前页面标题
 const currentPageTitle = computed(() => {
-  const menuItem = menuOptions.value.find(item => item.key === activeKey.value)
+  const findMenuItem = (items: MenuOption[], key: string): MenuOption | undefined => {
+    for (const item of items) {
+      if (item.key === key) {
+        return item
+      }
+      if (item.children) {
+        const found = findMenuItem(item.children, key)
+        if (found) return found
+      }
+    }
+    return undefined
+  }
+  
+  const menuItem = findMenuItem(menuOptions.value, activeKey.value)
   return menuItem?.label || '首页'
 })
 
@@ -126,40 +151,30 @@ const menuOptions = ref<MenuOption[]>([
   {
     label: 'MCP 工具',
     key: 'tools',
-    icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) }),
-    children: [
-      {
-        label: '工具管理',
-        key: 'tools-manage'
-      },
-      {
-        label: '工具配置',
-        key: 'tools-config'
-      }
-    ]
+    icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
   },
   {
-    label: 'MCP 代理',
+    label: 'MCP 统一管理',
+    key: 'mcp-unified',
+    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
+  },
+  {
+    label: '代理状态',
     key: 'proxy',
     icon: () => h(NIcon, null, { default: () => h(ServerOutline) }),
     children: [
       {
-        label: '代理管理',
-        key: 'proxy-manage'
+        label: '当前会话',
+        key: 'proxy-sessions'
       },
       {
-        label: '连接状态',
+        label: '工具状态',
         key: 'proxy-status'
       }
     ]
   },
   {
-    label: '系统监控',
-    key: 'monitor',
-    icon: () => h(NIcon, null, { default: () => h(BarChartOutline) })
-  },
-  {
-    label: '日志管理',
+    label: '日志查看',
     key: 'logs',
     icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
   },
@@ -172,11 +187,6 @@ const menuOptions = ref<MenuOption[]>([
 
 // 用户下拉菜单选项
 const userOptions = [
-  {
-    label: '个人设置',
-    key: 'profile',
-    icon: () => h(NIcon, null, { default: () => h(PersonOutline) })
-  },
   {
     label: '系统设置',
     key: 'system-settings',
@@ -200,20 +210,17 @@ const handleMenuSelect = (key: string) => {
     case 'home':
       router.push('/')
       break
-    case 'tools-manage':
+    case 'tools':
       router.push('/tools')
       break
-    case 'tools-config':
-      router.push('/tools/config')
+    case 'mcp-unified':
+      router.push('/mcp-unified')
       break
-    case 'proxy-manage':
-      router.push('/proxy')
+    case 'proxy-sessions':
+      router.push('/proxy/sessions')
       break
     case 'proxy-status':
       router.push('/proxy/status')
-      break
-    case 'monitor':
-      router.push('/monitor')
       break
     case 'logs':
       router.push('/logs')
@@ -227,10 +234,6 @@ const handleMenuSelect = (key: string) => {
 // 处理用户操作
 const handleUserAction = (key: string) => {
   switch (key) {
-    case 'profile':
-      // 跳转到个人设置页面
-      router.push('/profile')
-      break
     case 'system-settings':
       router.push('/settings')
       break

@@ -19,17 +19,7 @@ class MetricType(str, Enum):
     COUNTER = "counter"
     HISTOGRAM = "histogram"
 
-class BackupType(str, Enum):
-    """备份类型枚举"""
-    MANUAL = "manual"
-    AUTO = "auto"
-    SCHEDULED = "scheduled"
 
-class BackupStatus(str, Enum):
-    """备份状态枚举"""
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
 
 # 系统配置模式
 class SystemConfigBase(BaseModel):
@@ -93,29 +83,7 @@ class SystemInfoResponse(SystemInfoBase):
     class Config:
         from_attributes = True
 
-# 数据库备份模式
-class DatabaseBackupBase(BaseModel):
-    """数据库备份基础模式"""
-    filename: str = Field(..., min_length=1, max_length=200, description="备份文件名")
-    backup_type: BackupType = Field(BackupType.MANUAL, description="备份类型")
 
-class DatabaseBackupCreate(DatabaseBackupBase):
-    """创建数据库备份模式"""
-    pass
-
-class DatabaseBackupResponse(DatabaseBackupBase):
-    """数据库备份响应模式"""
-    id: int = Field(..., description="备份ID")
-    file_path: str = Field(..., description="文件路径")
-    file_size: Optional[int] = Field(None, description="文件大小（字节）")
-    status: BackupStatus = Field(..., description="备份状态")
-    error_message: Optional[str] = Field(None, description="错误信息")
-    started_at: datetime = Field(..., description="开始时间")
-    completed_at: Optional[datetime] = Field(None, description="完成时间")
-    duration_seconds: Optional[float] = Field(None, description="备份耗时（秒）")
-    
-    class Config:
-        from_attributes = True
 
 # 系统状态模式
 class SystemStatus(BaseModel):
@@ -137,7 +105,6 @@ class SystemStatus(BaseModel):
     
     # 数据库信息
     database_size: int = Field(..., description="数据库大小（字节）")
-    last_backup_time: Optional[datetime] = Field(None, description="最后备份时间")
     
     timestamp: datetime = Field(..., description="状态时间戳")
 
@@ -155,8 +122,6 @@ class SystemOperationBase(BaseModel):
     def validate_operation(cls, v):
         """验证操作类型"""
         allowed_operations = [
-            'backup_database',
-            'restore_database',
             'cleanup_logs',
             'restart_system',
             'update_config'
@@ -241,9 +206,7 @@ class SystemSettings(BaseModel):
     process_timeout: int = Field(..., ge=5, le=300, description="进程超时时间")
     restart_delay: int = Field(..., ge=1, le=60, description="重启延迟")
     
-    # 数据库设置
-    backup_enabled: bool = Field(..., description="启用自动备份")
-    backup_interval: str = Field(..., description="备份间隔")
+
     
     # WebSocket 设置
     heartbeat_interval: int = Field(..., ge=10, le=300, description="心跳间隔")
@@ -255,11 +218,3 @@ class SystemSettings(BaseModel):
         if v.upper() not in allowed_levels:
             raise ValueError(f'日志级别必须是: {", ".join(allowed_levels)}')
         return v.upper()
-    
-    @validator('backup_interval')
-    def validate_backup_interval(cls, v):
-        """验证备份间隔"""
-        allowed_intervals = ['hourly', 'daily', 'weekly', 'monthly']
-        if v not in allowed_intervals:
-            raise ValueError(f'备份间隔必须是: {", ".join(allowed_intervals)}')
-        return v
