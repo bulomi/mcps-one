@@ -217,16 +217,6 @@ uv pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-### Q: 访问静态文件（如图片）时返回 404？
-
-**A:** 检查 `uploads` 目录是否存在，并确保后端服务有读取权限：
-
-```bash
-# 在项目根目录创建 uploads 目录
-mkdir uploads
-chmod 755 uploads
-```
-
 ### Q: 前端无法连接到后端 API？
 
 **A:** 检查以下几点：
