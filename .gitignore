@@ -213,6 +213,7 @@ Thumbs.db
 
 # Development documentation (contains internal development rules and sensitive info)
 docs/
+uploads/
 
 # Development plans and internal documentation
 v1.0.1_development_plan.md

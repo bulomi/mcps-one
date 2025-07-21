@@ -26,11 +26,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY . .
 
-# 创建数据目录
-RUN mkdir -p /app/data/tools /app/data/logs /app/config
+# 创建数据目录和上传目录
+RUN mkdir -p /app/data/tools /app/data/logs /app/config /app/uploads
 
-# 创建非root用户
-RUN useradd -m -u 1000 mcpuser && chown -R mcpuser:mcpuser /app
+# 创建非root用户并设置权限
+RUN useradd -m -u 1000 mcpuser && \
+    chown -R mcpuser:mcpuser /app && \
+    chmod -R 755 /app/uploads
 
 # 设置权限
 RUN chmod +x start_mcp_server.py

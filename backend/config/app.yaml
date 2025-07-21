@@ -14,6 +14,7 @@ server:
   host: "0.0.0.0"
   port: 8000
   debug: false
+  uploads_dir: "./uploads"  # 文件上传目录
   cors_origins:
     - "http://localhost:3000"
     - "http://localhost:5173"

@@ -201,11 +201,8 @@ if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # 上传文件服务
-# 使用项目根目录的uploads文件夹
-uploads_dir = Path("../uploads")
-if not uploads_dir.exists():
-    # 如果相对路径不存在，尝试绝对路径
-    uploads_dir = Path("./uploads")
+# 使用配置管理器中指定的uploads目录
+uploads_dir = Path(config_manager.get("server.uploads_dir", "./uploads"))
 uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
 

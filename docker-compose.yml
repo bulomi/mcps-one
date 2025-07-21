@@ -2,32 +2,32 @@
 version: '3.8'
 
 services:
-  # MCP 服务端
-  mcp-server:
+  # 后端 API 服务
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: mcps-mcp-server
+    container_name: mcps-backend
     ports:
-      - "8001:8000"  # FastMCP 使用默认端口 8000
+      - "8000:8000"  # FastAPI 后端服务
     environment:
-      - MCP_SERVER_TRANSPORT=http
-      - MCP_SERVER_HOST=0.0.0.0
-      - MCP_SERVER_PORT=8000
-      - MCP_SERVER_LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
       - DATABASE_URL=sqlite:///./data/mcps.db
-      - HEALTH_CHECK_ENABLED=true
-      - METRICS_ENABLED=true
+      - MCP_AUTO_START=true
+      - MCP_MODE=unified
     volumes:
       - ./backend/data:/app/data
       - ./backend/.env:/app/.env:ro
+      - ./uploads:/app/uploads
+      - ./data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000', timeout=5)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/monitoring/health/live"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     networks:
       - mcps-network
 
@@ -40,14 +40,11 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000
-      - VITE_MCP_SERVER_URL=http://localhost:8001
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - VITE_API_BASE_URL=http://backend:8000
+      - NODE_ENV=production
     restart: unless-stopped
     depends_on:
-      - mcp-server
+      - backend
     networks:
       - mcps-network
 
@@ -64,7 +61,7 @@ services:
     restart: unless-stopped
     depends_on:
       - frontend
-      - mcp-server
+      - backend
     networks:
       - mcps-network
     profiles:
