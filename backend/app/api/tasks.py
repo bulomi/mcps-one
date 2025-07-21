@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.services.task_service import TaskService
+from app.services.tasks import TaskService
 from app.schemas.task import (
     TaskCreate,
     TaskUpdate,
@@ -50,7 +50,7 @@ async def get_tasks(
     """获取任务列表"""
     try:
         service = TaskService(db)
-        
+
         # 构建过滤条件
         filters = {}
         if status:
@@ -77,17 +77,17 @@ async def get_tasks(
             filters['scheduled_after'] = scheduled_after
         if scheduled_before:
             filters['scheduled_before'] = scheduled_before
-        
+
         tasks, total = service.get_tasks(page, size, filters)
-        
+
         return TaskListResponse(
-            tasks=[TaskResponse.from_orm(task) for task in tasks],
+            items=[TaskResponse.from_orm(task) for task in tasks],
             total=total,
             page=page,
             size=size,
             pages=(total + size - 1) // size
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")
 
@@ -99,12 +99,12 @@ async def get_task_stats(db: Session = Depends(get_db)):
         service = TaskService(db)
         stats = service.get_task_stats()
         return stats
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务统计失败: {str(e)}")
 
 
-@router.get("/recent")
+@router.get("/recent/")
 async def get_recent_tasks(
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: Session = Depends(get_db)
@@ -113,12 +113,12 @@ async def get_recent_tasks(
     try:
         service = TaskService(db)
         tasks = service.get_recent_tasks(limit)
-        
+
         return success_response(
             data=[TaskResponse.from_orm(task) for task in tasks],
             message="获取最近任务成功"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取最近任务失败: {str(e)}")
 
@@ -133,12 +133,12 @@ async def get_tasks_by_session(
     try:
         service = TaskService(db)
         tasks = service.get_tasks_by_session(session_id, limit)
-        
+
         return success_response(
             data=[TaskResponse.from_orm(task) for task in tasks],
             message="获取会话任务成功"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取会话任务失败: {str(e)}")
 
@@ -153,12 +153,12 @@ async def get_tasks_by_tool(
     try:
         service = TaskService(db)
         tasks = service.get_tasks_by_tool(tool_id, limit)
-        
+
         return success_response(
             data=[TaskResponse.from_orm(task) for task in tasks],
             message="获取工具任务成功"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取工具任务失败: {str(e)}")
 
@@ -172,12 +172,12 @@ async def get_task(
     try:
         service = TaskService(db)
         task = service.get_task(task_id)
-        
+
         if not task:
             raise HTTPException(status_code=404, detail=f"任务不存在: {task_id}")
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -193,9 +193,9 @@ async def create_task(
     try:
         service = TaskService(db)
         task = service.create_task(task_data)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskOperationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -212,9 +212,9 @@ async def update_task(
     try:
         service = TaskService(db)
         task = service.update_task(task_id, task_data)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -232,12 +232,12 @@ async def delete_task(
     try:
         service = TaskService(db)
         success = service.delete_task(task_id)
-        
+
         if success:
             return success_response(message="任务删除成功")
         else:
             raise HTTPException(status_code=400, detail="删除任务失败")
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -253,9 +253,9 @@ async def start_task(
     try:
         service = TaskService(db)
         task = service.start_task(task_id)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -275,9 +275,9 @@ async def complete_task(
         service = TaskService(db)
         output_data = execution_data.output_data if execution_data else None
         task = service.complete_task(task_id, output_data)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -297,9 +297,9 @@ async def fail_task(
         service = TaskService(db)
         error_message = execution_data.error_message or "任务执行失败"
         task = service.fail_task(task_id, error_message)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -317,9 +317,9 @@ async def cancel_task(
     try:
         service = TaskService(db)
         task = service.cancel_task(task_id)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -337,9 +337,9 @@ async def retry_task(
     try:
         service = TaskService(db)
         task = service.retry_task(task_id)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -358,9 +358,9 @@ async def update_task_progress(
     try:
         service = TaskService(db)
         task = service.update_task_progress(task_id, progress_data)
-        
+
         return TaskResponse.from_orm(task)
-        
+
     except TaskNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except TaskOperationError as e:
@@ -378,9 +378,9 @@ async def batch_operation(
     try:
         service = TaskService(db)
         result = service.batch_operation(operation)
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量操作任务失败: {str(e)}")
 
@@ -394,11 +394,11 @@ async def cleanup_old_tasks(
     try:
         service = TaskService(db)
         count = service.cleanup_old_tasks(days)
-        
+
         return success_response(
             data={"cleaned_count": count},
             message=f"清理旧任务完成，共清理 {count} 个任务"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"清理旧任务失败: {str(e)}")

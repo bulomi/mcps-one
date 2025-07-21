@@ -10,7 +10,7 @@ from app.core.database import Base
 class User(Base):
     """用户模型"""
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, index=True, nullable=False, comment="用户名")
     email = Column(String(100), unique=True, index=True, nullable=False, comment="邮箱")
@@ -18,25 +18,25 @@ class User(Base):
     phone = Column(String(20), comment="电话号码")
     bio = Column(Text, comment="个人简介")
     avatar_url = Column(String(500), comment="头像URL")
-    
+
     # 安全相关
     password_hash = Column(String(255), comment="密码哈希")
     is_active = Column(Boolean, default=True, comment="是否激活")
-    
+
     # 偏好设置
     theme = Column(String(20), default="light", comment="主题设置")
     language = Column(String(10), default="zh-CN", comment="语言设置")
     timezone = Column(String(50), default="Asia/Shanghai", comment="时区设置")
     email_notifications = Column(Boolean, default=True, comment="邮件通知")
-    
+
     # 系统字段
     created_at = Column(DateTime, default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
     last_login_at = Column(DateTime, comment="最后登录时间")
-    
+
     def __repr__(self):
         return f"<User(username='{self.username}', email='{self.email}')>"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
@@ -56,7 +56,7 @@ class User(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "last_login_at": self.last_login_at.isoformat() if self.last_login_at else None,
         }
-    
+
     def to_public_dict(self) -> Dict[str, Any]:
         """转换为公开字典（不包含敏感信息）"""
         return {

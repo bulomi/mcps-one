@@ -1,12 +1,19 @@
 """系统管理 API 路由"""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 import logging
 import asyncio
+import os
+import uuid
+from pathlib import Path
 
 from app.core.database import get_db
+from app.core.unified_config_manager import get_unified_config_manager
+
+# 获取统一配置管理器实例
+config_manager = get_unified_config_manager()
 from app.schemas.system import (
     SystemConfigCreate,
     SystemConfigUpdate,
@@ -17,10 +24,11 @@ from app.schemas.system import (
     ConfigBatchUpdate,
     HealthCheckResponse,
 )
-from app.services.system_service import SystemService
+from app.services.system import SystemService
 
 from app.utils.response import success_response, error_response
 from app.utils.pagination import simple_paginate as paginate
+from app.utils.validators import validate_email_address, validate_webhook_url
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/system", tags=["系统管理"])
@@ -37,24 +45,24 @@ async def get_system_configs(
     """获取系统配置列表"""
     try:
         system_service = SystemService(db)
-        
+
         # 构建过滤条件
         filters = {}
         if category:
             filters['category'] = category
         if search:
             filters['search'] = search
-        
+
         # 获取配置列表
         configs, total = system_service.get_configs(
             page=page,
             size=size,
             filters=filters
         )
-        
+
         # 分页信息
         pagination = paginate(total, page, size)
-        
+
         return success_response(
             data={
                 "items": [config.to_dict() for config in configs],
@@ -75,10 +83,10 @@ async def get_system_config(
     try:
         system_service = SystemService(db)
         config = system_service.get_config(key)
-        
+
         if not config:
             raise HTTPException(status_code=404, detail="配置项不存在")
-        
+
         return success_response(
             data=config.to_dict(),
             message="获取系统配置成功"
@@ -89,6 +97,110 @@ async def get_system_config(
         logger.error(f"获取系统配置失败: {e}")
         return error_response(message="获取系统配置失败", error_code=str(e))
 
+@router.post("/settings/", response_model=dict, summary="保存系统设置")
+async def save_system_settings(
+    settings: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """保存系统设置"""
+    try:
+        system_service = SystemService(db)
+        result = system_service.save_settings(settings)
+
+        return success_response(
+            data=result,
+            message="保存系统设置成功"
+        )
+    except Exception as e:
+        logger.error(f"保存系统设置失败: {e}")
+        return error_response(message="保存系统设置失败", error_code=str(e))
+
+@router.get("/settings/", response_model=dict, summary="获取所有系统设置")
+async def get_all_system_settings(
+    db: Session = Depends(get_db)
+):
+    """获取所有系统设置"""
+    try:
+        system_service = SystemService(db)
+        settings = system_service.get_all_settings()
+
+        return success_response(
+            data=settings,
+            message="获取系统设置成功"
+        )
+    except Exception as e:
+        logger.error(f"获取系统设置失败: {e}")
+        return error_response(message="获取系统设置失败", error_code=str(e))
+
+@router.get("/config/export", response_model=dict, summary="导出配置")
+async def export_config(
+    db: Session = Depends(get_db)
+):
+    """导出配置"""
+    try:
+        system_service = SystemService(db)
+        config_data = system_service.export_config()
+
+        return success_response(
+            data=config_data,
+            message="导出配置成功"
+        )
+    except Exception as e:
+        logger.error(f"导出配置失败: {e}")
+        return error_response(message="导出配置失败", error_code=str(e))
+
+@router.post("/config/import", response_model=dict, summary="导入配置")
+async def import_config(
+    config_data: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """导入配置"""
+    try:
+        system_service = SystemService(db)
+        result = system_service.import_config(config_data)
+
+        return success_response(
+            data=result,
+            message="导入配置成功"
+        )
+    except Exception as e:
+        logger.error(f"导入配置失败: {e}")
+        return error_response(message="导入配置失败", error_code=str(e))
+
+@router.post("/config/reset", response_model=dict, summary="重置配置")
+async def reset_config(
+    db: Session = Depends(get_db)
+):
+    """重置配置为默认值"""
+    try:
+        system_service = SystemService(db)
+        result = system_service.reset_config()
+
+        return success_response(
+            data=result,
+            message="重置配置成功"
+        )
+    except Exception as e:
+        logger.error(f"重置配置失败: {e}")
+        return error_response(message="重置配置失败", error_code=str(e))
+
+@router.get("/config/stats", response_model=dict, summary="获取配置统计")
+async def get_config_stats(
+    db: Session = Depends(get_db)
+):
+    """获取配置统计信息"""
+    try:
+        system_service = SystemService(db)
+        stats = system_service.get_config_stats()
+
+        return success_response(
+            data=stats,
+            message="获取配置统计成功"
+        )
+    except Exception as e:
+        logger.error(f"获取配置统计失败: {e}")
+        return error_response(message="获取配置统计失败", error_code=str(e))
+
 @router.post("/config", response_model=dict, summary="创建系统配置")
 async def create_system_config(
     config_data: SystemConfigCreate,
@@ -97,14 +209,14 @@ async def create_system_config(
     """创建系统配置"""
     try:
         system_service = SystemService(db)
-        
+
         # 检查配置键是否已存在
         if system_service.get_config(config_data.key):
             raise HTTPException(status_code=400, detail="配置键已存在")
-        
+
         # 创建配置
         config = system_service.create_config(config_data)
-        
+
         return success_response(
             data=config.to_dict(),
             message="创建系统配置成功"
@@ -124,15 +236,15 @@ async def update_system_config(
     """更新系统配置"""
     try:
         system_service = SystemService(db)
-        
+
         # 检查配置是否存在
         config = system_service.get_config(key)
         if not config:
             raise HTTPException(status_code=404, detail="配置项不存在")
-        
+
         # 更新配置
         updated_config = system_service.update_config(key, config_data)
-        
+
         return success_response(
             data=updated_config.to_dict(),
             message="更新系统配置成功"
@@ -151,19 +263,19 @@ async def delete_system_config(
     """删除系统配置"""
     try:
         system_service = SystemService(db)
-        
+
         # 检查配置是否存在
         config = system_service.get_config(key)
         if not config:
             raise HTTPException(status_code=404, detail="配置项不存在")
-        
+
         # 检查是否为系统关键配置
         if config.is_system:
             raise HTTPException(status_code=400, detail="系统关键配置不能删除")
-        
+
         # 删除配置
         system_service.delete_config(key)
-        
+
         return success_response(message="删除系统配置成功")
     except HTTPException:
         raise
@@ -180,7 +292,7 @@ async def batch_update_configs(
     try:
         system_service = SystemService(db)
         result = system_service.batch_update_configs(batch_data.configs)
-        
+
         return success_response(
             data=result,
             message="批量更新系统配置成功"
@@ -198,7 +310,7 @@ async def get_system_info(
     try:
         system_service = SystemService(db)
         info = system_service.get_system_info()
-        
+
         return success_response(
             data=info,
             message="获取系统信息成功"
@@ -215,7 +327,7 @@ async def get_system_status(
     try:
         system_service = SystemService(db)
         status = system_service.get_system_status()
-        
+
         return success_response(
             data=status,
             message="获取系统状态成功"
@@ -232,10 +344,10 @@ async def health_check(
     try:
         system_service = SystemService(db)
         health = system_service.health_check()
-        
+
         # 根据健康状态设置HTTP状态码
         status_code = 200 if health["status"] == "healthy" else 503
-        
+
         return success_response(
             data=health,
             message="健康检查完成"
@@ -246,43 +358,9 @@ async def health_check(
 
 
 
-# 设置导入导出
-@router.get("/settings/export", response_model=dict, summary="导出系统设置")
-async def export_settings(
-    db: Session = Depends(get_db)
-):
-    """导出系统设置"""
-    try:
-        system_service = SystemService(db)
-        settings = system_service.export_settings()
-        
-        return success_response(
-            data=settings,
-            message="导出系统设置成功"
-        )
-    except Exception as e:
-        logger.error(f"导出系统设置失败: {e}")
-        return error_response(message="导出系统设置失败", error_code=str(e))
 
-@router.post("/settings/import", response_model=dict, summary="导入系统设置")
-async def import_settings(
-    settings: Dict[str, Any],
-    db: Session = Depends(get_db)
-):
-    """导入系统设置"""
-    try:
-        system_service = SystemService(db)
-        result = system_service.import_settings(settings)
-        
-        return success_response(
-            data=result,
-            message="导入系统设置成功"
-        )
-    except Exception as e:
-        logger.error(f"导入系统设置失败: {e}")
-        return error_response(message="导入系统设置失败", error_code=str(e))
 
-@router.post("/settings/save", response_model=dict, summary="保存系统设置")
+@router.post("/settings/save/", response_model=dict, summary="保存系统设置")
 async def save_settings(
     settings: Dict[str, Any],
     db: Session = Depends(get_db)
@@ -291,7 +369,7 @@ async def save_settings(
     try:
         system_service = SystemService(db)
         result = system_service.save_settings(settings)
-        
+
         return success_response(
             data=result,
             message="保存系统设置成功"
@@ -299,6 +377,90 @@ async def save_settings(
     except Exception as e:
         logger.error(f"保存系统设置失败: {e}")
         return error_response(message="保存系统设置失败", error_code=str(e))
+
+@router.post("/upload/logo", response_model=dict, summary="上传LOGO")
+async def upload_logo(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """上传LOGO文件"""
+    try:
+        # 验证文件类型
+        allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp", "image/svg+xml"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="不支持的文件类型，请上传图片文件")
+
+        # 验证文件大小 (5MB)
+        max_size = 5 * 1024 * 1024
+        file_content = await file.read()
+        if len(file_content) > max_size:
+            raise HTTPException(status_code=400, detail="文件大小不能超过5MB")
+
+        # 生成基于日期的上传目录
+        from datetime import datetime
+        current_date = datetime.now()
+        date_path = current_date.strftime("%Y%m%d")
+        upload_dir = Path(config_manager.get("server.uploads_dir", "./uploads")) / date_path
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # 获取系统服务实例
+        system_service = SystemService(db)
+
+        # 删除旧的LOGO文件（文件版本管理）
+        try:
+            old_logo_config = system_service.get_config("app.logoUrl")
+            if old_logo_config and old_logo_config.value:
+                old_logo_url = old_logo_config.value
+                # 从URL中提取文件路径
+                if old_logo_url.startswith("/uploads/"):
+                    old_file_relative_path = old_logo_url.replace("/uploads/", "")
+                    old_file_path = Path(config_manager.get("server.uploads_dir", "./uploads")) / old_file_relative_path
+                    if old_file_path.exists():
+                        old_file_path.unlink()
+                        logger.info(f"已删除旧LOGO文件: {old_file_path}")
+        except Exception as e:
+            logger.warning(f"删除旧LOGO文件时出错: {e}")
+
+        # 生成唯一文件名
+        file_extension = Path(file.filename).suffix
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = upload_dir / unique_filename
+
+        # 保存文件
+        with open(file_path, "wb") as f:
+            f.write(file_content)
+
+        # 生成访问URL（使用日期路径）
+        logo_url = f"/uploads/{date_path}/{unique_filename}"
+
+        # 更新系统配置中的LOGO URL
+        try:
+            logo_config = system_service.get_config("app.logoUrl")
+            if logo_config:
+                from app.schemas.system import SystemConfigUpdate
+                update_data = SystemConfigUpdate(value=logo_url)
+                system_service.update_config("app.logoUrl", update_data)
+            else:
+                from app.schemas.system import SystemConfigCreate
+                create_data = SystemConfigCreate(
+                    key="app.logoUrl",
+                    value=logo_url,
+                    category="application",
+                    description="应用LOGO地址"
+                )
+                system_service.create_config(create_data)
+        except Exception as e:
+            logger.warning(f"更新LOGO配置时出错: {e}")
+
+        return success_response(
+            data={"url": logo_url},
+            message="LOGO上传成功"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"上传LOGO失败: {e}")
+        return error_response(message="上传LOGO失败", error_code=str(e))
 
 # 系统测试
 
@@ -309,13 +471,20 @@ async def test_email_notification(
 ):
     """测试邮件通知"""
     try:
+        # 验证邮箱格式
+        is_valid, error_msg = validate_email_address(email)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
+
         system_service = SystemService(db)
-        result = system_service.test_email_notification(email)
-        
+        result = system_service.test_email_notification(email.strip())
+
         return success_response(
             data=result,
             message="邮件通知测试完成"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"测试邮件通知失败: {e}")
         return error_response(message="测试邮件通知失败", error_code=str(e))
@@ -327,13 +496,20 @@ async def test_webhook_notification(
 ):
     """测试Webhook通知"""
     try:
+        # 验证URL格式
+        is_valid, error_msg = validate_webhook_url(url)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=error_msg)
+
         system_service = SystemService(db)
-        result = system_service.test_webhook_notification(url)
-        
+        result = system_service.test_webhook_notification(url.strip())
+
         return success_response(
             data=result,
             message="Webhook通知测试完成"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"测试Webhook通知失败: {e}")
         return error_response(message="测试Webhook通知失败", error_code=str(e))
@@ -347,7 +523,7 @@ async def clear_cache(
     try:
         system_service = SystemService(db)
         result = system_service.clear_cache()
-        
+
         return success_response(
             data=result,
             message="清理缓存成功"
@@ -356,7 +532,7 @@ async def clear_cache(
         logger.error(f"清理缓存失败: {e}")
         return error_response(message="清理缓存失败", error_code=str(e))
 
-@router.post("/settings/reset", response_model=dict, summary="重置为默认值")
+@router.post("/settings/reset/", response_model=dict, summary="重置为默认值")
 async def reset_to_defaults(
     confirm: bool = Query(False, description="确认重置"),
     db: Session = Depends(get_db)
@@ -365,10 +541,10 @@ async def reset_to_defaults(
     try:
         if not confirm:
             raise HTTPException(status_code=400, detail="请确认重置操作")
-        
+
         system_service = SystemService(db)
         result = system_service.reset_to_defaults()
-        
+
         return success_response(
             data=result,
             message="重置为默认值成功"
@@ -389,7 +565,7 @@ async def execute_system_operation(
     """执行系统操作"""
     try:
         system_service = SystemService(db)
-        
+
         # 验证操作类型
         valid_operations = [
             "restart_system",
@@ -399,19 +575,19 @@ async def execute_system_operation(
             "update_system",
             "reset_config"
         ]
-        
+
         if operation_data.operation not in valid_operations:
             raise HTTPException(status_code=400, detail="无效的操作类型")
-        
+
         # 记录操作
         operation = system_service.create_operation(operation_data)
-        
+
         # 异步执行操作
         background_tasks.add_task(
             system_service.execute_operation,
             operation.id
         )
-        
+
         return success_response(
             data=operation.to_dict(),
             message="系统操作已启动"
@@ -423,7 +599,7 @@ async def execute_system_operation(
         return error_response(message="执行系统操作失败", error_code=str(e))
 
 # 系统监控
-@router.get("/stats", response_model=dict, summary="获取系统统计信息")
+@router.get("/stats/", response_model=dict, summary="获取系统统计信息")
 async def get_system_stats(
     db: Session = Depends(get_db)
 ):
@@ -431,7 +607,7 @@ async def get_system_stats(
     try:
         system_service = SystemService(db)
         stats = system_service.get_system_stats()
-        
+
         return success_response(
             data=stats,
             message="获取系统统计信息成功"
@@ -449,7 +625,7 @@ async def get_system_metrics(
     try:
         system_service = SystemService(db)
         metrics = system_service.get_system_metrics(period)
-        
+
         return success_response(
             data=metrics,
             message="获取系统指标成功"

@@ -1,0 +1,153 @@
+# MCPS.ONE 应用配置文件
+# 此文件定义了应用的核心配置，支持环境变量覆盖
+
+# 应用基础配置
+app:
+  name: "MCPS.ONE"
+  version: "1.0.0"
+  description: "MCP 工具管理平台"
+  show_title: true
+  logo_url: ""
+  
+# 服务器配置
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://localhost:5174"
+  allowed_hosts:
+    - "localhost"
+    - "127.0.0.1"
+
+# 数据库配置
+database:
+  url: "sqlite:///./data/mcps.db"
+  echo: false
+  backup_enabled: true
+  backup_interval: "daily"
+  backup_retention_days: 30
+
+# 日志配置
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./data/logs/app.log"
+  max_file_size: "10MB"
+  backup_count: 5
+  console_output: true
+
+# MCP 服务配置
+mcp:
+  # 基础配置
+  max_processes: 10
+  process_timeout: 30
+  restart_delay: 5
+  tools_dir: "./data/tools"
+  logs_dir: "./data/logs"
+  
+  # 服务端配置
+  server:
+    enabled: true
+    transport: "stdio"  # stdio, http
+    host: "127.0.0.1"
+    port: 8001
+    log_level: "INFO"
+    show_banner: true
+    max_connections: 10
+    connection_timeout: 30
+    stateless_http: false
+  
+  # 代理配置
+  proxy:
+    enabled: true
+    auto_start: true
+    graceful_shutdown: true
+    tool_startup_timeout: 60
+    health_check_interval: 30
+    retry_count: 3
+    enable_metrics: true
+
+# 功能开关
+features:
+  developer_mode: false
+  api_docs: true
+  verbose_errors: false
+  experimental_features: false
+  auto_update: false
+  health_check: true
+  websocket_enabled: true
+
+# 通知配置
+notifications:
+  email:
+    enabled: false
+    smtp_host: ""
+    smtp_port: 587
+    sender_email: ""
+    password: ""
+    use_ssl: false
+    use_tls: true
+  
+  webhook:
+    enabled: false
+    url: ""
+    timeout: 30
+    retry_count: 3
+    events:
+      - "tool_error"
+      - "system_error"
+      - "backup_completed"
+
+# 安全配置
+security:
+  secret_key: "your-secret-key-change-in-production"
+  access_token_expire_minutes: 30
+  password_min_length: 8
+  max_login_attempts: 5
+  lockout_duration: 300  # 5分钟
+
+# 性能配置
+performance:
+  max_request_size: "10MB"
+  request_timeout: 30
+  worker_processes: 1
+  worker_connections: 1000
+  keepalive_timeout: 65
+
+# 数据管理
+data_management:
+  retention_days: 30
+  cleanup_strategy: "auto"  # auto, manual, scheduled
+  cleanup_schedule: "0 2 * * *"  # 每天凌晨2点
+  max_log_files: 100
+  max_backup_files: 10
+
+# 监控配置
+monitoring:
+  metrics_enabled: true
+  metrics_interval: 60  # 秒
+  health_check_interval: 30  # 秒
+  alert_thresholds:
+    cpu_percent: 80
+    memory_percent: 85
+    disk_percent: 90
+    error_rate: 5  # 每分钟错误数
+
+# 国际化配置
+i18n:
+  default_language: "zh-CN"
+  supported_languages:
+    - "zh-CN"
+    - "en-US"
+    - "ja-JP"
+  timezone: "Asia/Shanghai"
+
+# 开发配置
+development:
+  hot_reload: true
+  debug_toolbar: false
+  profiling: false
+  mock_external_services: false

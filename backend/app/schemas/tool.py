@@ -1,6 +1,6 @@
 """工具相关的 Pydantic 模式定义"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -33,7 +33,7 @@ class ConnectionConfig(BaseModel):
     port: Optional[int] = Field(None, description="端口号")
     path: Optional[str] = Field(None, description="路径")
     timeout: int = Field(30, description="连接超时时间")
-    
+
 class RuntimeConfig(BaseModel):
     """运行时配置模式"""
     auto_start: bool = Field(False, description="自动启动")
@@ -52,8 +52,9 @@ class ToolBase(BaseModel):
     type: ToolType = Field(ToolType.CUSTOM, description="工具类型")
     category: Optional[str] = Field(None, max_length=50, description="工具分类")
     tags: List[str] = Field(default_factory=list, description="工具标签")
-    
-    @validator('name')
+
+    @field_validator('name')
+    @classmethod
     def validate_name(cls, v):
         """验证工具名称"""
         if not v.replace('_', '').replace('-', '').isalnum():
@@ -65,31 +66,33 @@ class ToolConfigBase(BaseModel):
     command: str = Field(..., min_length=1, description="启动命令")
     working_directory: Optional[str] = Field(None, max_length=500, description="工作目录")
     environment_variables: Dict[str, str] = Field(default_factory=dict, description="环境变量")
-    
+
     # 连接配置
     connection_type: ConnectionType = Field(ConnectionType.STDIO, description="连接类型")
     host: Optional[str] = Field(None, max_length=100, description="主机地址")
     port: Optional[int] = Field(None, ge=1, le=65535, description="端口号")
     path: Optional[str] = Field(None, max_length=200, description="路径")
-    
+
     # 运行时配置
     auto_start: bool = Field(False, description="自动启动")
     restart_on_failure: bool = Field(True, description="失败时重启")
     max_restart_attempts: int = Field(3, ge=0, le=10, description="最大重启次数")
     timeout: int = Field(30, ge=5, le=300, description="超时时间（秒）")
-    
-    @validator('host')
-    def validate_host(cls, v, values):
+
+    @field_validator('host')
+    @classmethod
+    def validate_host(cls, v, info):
         """验证主机地址"""
-        connection_type = values.get('connection_type')
+        connection_type = info.data.get('connection_type')
         if connection_type in [ConnectionType.HTTP, ConnectionType.WEBSOCKET] and not v:
             raise ValueError(f'{connection_type.value} 连接类型需要指定主机地址')
         return v
-    
-    @validator('port')
-    def validate_port(cls, v, values):
+
+    @field_validator('port')
+    @classmethod
+    def validate_port(cls, v, info):
         """验证端口号"""
-        connection_type = values.get('connection_type')
+        connection_type = info.data.get('connection_type')
         if connection_type in [ConnectionType.HTTP, ConnectionType.WEBSOCKET] and not v:
             raise ValueError(f'{connection_type.value} 连接类型需要指定端口号')
         return v
@@ -112,27 +115,27 @@ class ToolUpdate(BaseModel):
     description: Optional[str] = Field(None, description="工具描述")
     category: Optional[str] = Field(None, max_length=50, description="工具分类")
     tags: Optional[List[str]] = Field(None, description="工具标签")
-    
+
     # 配置更新
     command: Optional[str] = Field(None, min_length=1, description="启动命令")
     working_directory: Optional[str] = Field(None, max_length=500, description="工作目录")
     environment_variables: Optional[Dict[str, str]] = Field(None, description="环境变量")
-    
+
     connection_type: Optional[ConnectionType] = Field(None, description="连接类型")
     host: Optional[str] = Field(None, max_length=100, description="主机地址")
     port: Optional[int] = Field(None, ge=1, le=65535, description="端口号")
     path: Optional[str] = Field(None, max_length=200, description="路径")
-    
+
     auto_start: Optional[bool] = Field(None, description="自动启动")
     restart_on_failure: Optional[bool] = Field(None, description="失败时重启")
     max_restart_attempts: Optional[int] = Field(None, ge=0, le=10, description="最大重启次数")
     timeout: Optional[int] = Field(None, ge=5, le=300, description="超时时间（秒）")
-    
+
     # 元数据更新
     version: Optional[str] = Field(None, max_length=20, description="工具版本")
     author: Optional[str] = Field(None, max_length=100, description="作者")
     homepage: Optional[str] = Field(None, max_length=500, description="主页")
-    
+
     enabled: Optional[bool] = Field(None, description="是否启用")
 
 # 响应模式
@@ -147,17 +150,17 @@ class ToolResponse(ToolBase, ToolConfigBase, ToolMetadata):
     enabled: bool = Field(True, description="是否启用")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 工具操作模式
 class ToolAction(BaseModel):
     """工具操作模式"""
     action: str = Field(..., description="操作类型: start, stop, restart")
     force: bool = Field(False, description="是否强制执行")
-    
-    @validator('action')
+
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """验证操作类型"""
         allowed_actions = ['start', 'stop', 'restart']
@@ -178,9 +181,8 @@ class ToolStatusResponse(BaseModel):
     is_running: bool = Field(..., description="是否正在运行")
     can_start: bool = Field(..., description="是否可以启动")
     can_stop: bool = Field(..., description="是否可以停止")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 工具分类模式
 class CategoryBase(BaseModel):
@@ -209,18 +211,18 @@ class CategoryResponse(CategoryBase):
     id: int = Field(..., description="分类ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 批量操作模式
 class ToolBatchAction(BaseModel):
     """工具批量操作模式"""
-    tool_ids: List[int] = Field(..., min_items=1, description="工具ID列表")
+    tool_ids: List[int] = Field(..., min_length=1, description="工具ID列表")
     action: str = Field(..., description="操作类型: start, stop, restart, delete")
     force: bool = Field(False, description="是否强制执行")
-    
-    @validator('action')
+
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         """验证操作类型"""
         allowed_actions = ['start', 'stop', 'restart', 'delete']

@@ -8,7 +8,8 @@ import sys
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.core.config import settings
+# 直接使用数据库 URL，不依赖配置管理器
+# config_manager = None
 from app.core.database import Base
 from app.models import *  # 导入所有模型
 
@@ -32,8 +33,8 @@ target_metadata = Base.metadata
 
 def get_url():
     """获取数据库连接URL"""
-    # 使用 alembic.ini 中的配置
-    return config.get_main_option("sqlalchemy.url")
+    # 直接返回数据库 URL，确保路径一致
+    return "sqlite:///./data/mcps.db"
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -70,7 +71,7 @@ def run_migrations_online() -> None:
     """
     configuration = config.get_section(config.config_ini_section)
     configuration["sqlalchemy.url"] = get_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

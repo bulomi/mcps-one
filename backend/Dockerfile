@@ -13,6 +13,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
@@ -25,18 +27,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 创建数据目录
-RUN mkdir -p /app/data/tools /app/data/logs
+RUN mkdir -p /app/data/tools /app/data/logs /app/config
+
+# 创建非root用户
+RUN useradd -m -u 1000 mcpuser && chown -R mcpuser:mcpuser /app
 
 # 设置权限
 RUN chmod +x start_mcp_server.py
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)" || exit 1
+    CMD curl -f http://localhost:8000/monitoring/health/live || exit 1
 
 # 暴露端口
 EXPOSE 8000
 EXPOSE 8001
 
+# 切换到非root用户
+USER mcpuser
+
 # 启动命令
-CMD ["python", "start_mcp_server.py", "--transport", "http", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,7 +1,7 @@
 /**
  * 日志管理相关API接口
  */
-import request from '@/utils/request'
+import api from './index'
 
 /**
  * 获取日志统计信息
@@ -11,11 +11,7 @@ import request from '@/utils/request'
  * @returns {Promise}
  */
 export const getLogStats = (params = {}) => {
-  return request({
-    url: '/logs/stats',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/stats/', { params })
 }
 
 /**
@@ -23,10 +19,7 @@ export const getLogStats = (params = {}) => {
  * @returns {Promise}
  */
 export const getLogSummary = () => {
-  return request({
-    url: '/logs/stats/summary',
-    method: 'get'
-  })
+  return api.get('/logs/stats/summary/')
 }
 
 /**
@@ -42,11 +35,7 @@ export const getLogSummary = () => {
  * @returns {Promise}
  */
 export const getSystemLogs = (params = {}) => {
-  return request({
-    url: '/logs/system',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/system/', { params })
 }
 
 /**
@@ -55,10 +44,7 @@ export const getSystemLogs = (params = {}) => {
  * @returns {Promise}
  */
 export const getSystemLog = (logId) => {
-  return request({
-    url: `/logs/system/${logId}`,
-    method: 'get'
-  })
+  return api.get(`/logs/system/${logId}/`)
 }
 
 /**
@@ -77,11 +63,7 @@ export const getSystemLog = (logId) => {
  * @returns {Promise}
  */
 export const getOperationLogs = (params = {}) => {
-  return request({
-    url: '/logs/operations',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/operations/', { params })
 }
 
 /**
@@ -90,10 +72,7 @@ export const getOperationLogs = (params = {}) => {
  * @returns {Promise}
  */
 export const getOperationLog = (logId) => {
-  return request({
-    url: `/logs/operations/${logId}`,
-    method: 'get'
-  })
+  return api.get(`/logs/operations/${logId}/`)
 }
 
 /**
@@ -110,11 +89,7 @@ export const getOperationLog = (logId) => {
  * @returns {Promise}
  */
 export const getMcpLogs = (params = {}) => {
-  return request({
-    url: '/logs/mcp',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/mcp/', { params })
 }
 
 /**
@@ -123,10 +98,7 @@ export const getMcpLogs = (params = {}) => {
  * @returns {Promise}
  */
 export const getMcpLog = (logId) => {
-  return request({
-    url: `/logs/mcp/${logId}`,
-    method: 'get'
-  })
+  return api.get(`/logs/mcp/${logId}/`)
 }
 
 /**
@@ -141,11 +113,7 @@ export const getMcpLog = (logId) => {
  * @returns {Promise}
  */
 export const searchLogs = (params = {}) => {
-  return request({
-    url: '/logs/search',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/search/', { params })
 }
 
 /**
@@ -157,11 +125,7 @@ export const searchLogs = (params = {}) => {
  * @returns {Promise}
  */
 export const getRealtimeLogs = (params = {}) => {
-  return request({
-    url: '/logs/realtime',
-    method: 'get',
-    params
-  })
+  return api.get('/logs/realtime/', { params })
 }
 
 /**
@@ -174,11 +138,7 @@ export const getRealtimeLogs = (params = {}) => {
  * @returns {Promise}
  */
 export const cleanupLogs = (data) => {
-  return request({
-    url: '/logs/cleanup',
-    method: 'post',
-    data
-  })
+  return api.post('/logs/cleanup/', data)
 }
 
 /**
@@ -193,12 +153,7 @@ export const cleanupLogs = (data) => {
  * @returns {Promise}
  */
 export const exportLogs = (params = {}) => {
-  return request({
-    url: '/logs/export',
-    method: 'get',
-    params,
-    responseType: 'blob'
-  })
+  return api.get('/logs/export/', { params, responseType: 'blob' })
 }
 
 /**

@@ -1,568 +1,924 @@
+<template>
+  <div class="proxy-view">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <h1>代理管理</h1>
+          <p>管理和配置网络代理服务器</p>
+        </div>
+        <div class="header-right">
+          <n-space>
+            <n-button type="primary" @click="showAddModal = true">
+              <template #icon>
+                <n-icon><AddOutline /></n-icon>
+              </template>
+              添加代理
+            </n-button>
+            <n-button @click="refreshProxies">
+              <template #icon>
+                <n-icon><RefreshOutline /></n-icon>
+              </template>
+              刷新
+            </n-button>
+            <n-button @click="testAllProxies" :loading="testAllLoading">
+              <template #icon>
+                <n-icon><PlayOutline /></n-icon>
+              </template>
+              测试所有
+            </n-button>
+            <div class="dropdown-wrapper">
+              <n-dropdown 
+                trigger="click" 
+                :options="moreOptions" 
+                @select="handleMoreAction"
+                placement="bottom-end"
+                :show-arrow="true"
+                :to="false"
+              >
+                <n-button>
+                  <template #icon>
+                    <n-icon><EllipsisHorizontalOutline /></n-icon>
+                  </template>
+                  更多
+                </n-button>
+              </n-dropdown>
+            </div>
+          </n-space>
+        </div>
+      </div>
+      
+      <!-- 批量操作栏 -->
+      <div v-if="selectedRowKeys.length > 0" class="batch-actions">
+        <n-space>
+          <span class="batch-info">已选择 {{ selectedRowKeys.length }} 个代理</span>
+          <n-button size="small" type="success" @click="batchAction('enable')" :loading="batchLoading">
+            <template #icon>
+              <n-icon><CheckmarkOutline /></n-icon>
+            </template>
+            批量启用
+          </n-button>
+          <n-button size="small" type="warning" @click="batchAction('disable')" :loading="batchLoading">
+            <template #icon>
+              <n-icon><CloseOutline /></n-icon>
+            </template>
+            批量禁用
+          </n-button>
+          <n-button size="small" @click="batchAction('test')" :loading="batchLoading">
+            <template #icon>
+              <n-icon><PlayOutline /></n-icon>
+            </template>
+            批量测试
+          </n-button>
+          <n-popconfirm @positive-click="batchAction('delete')">
+            <template #trigger>
+              <n-button size="small" type="error" :loading="batchLoading">
+                <template #icon>
+                  <n-icon><TrashOutline /></n-icon>
+                </template>
+                批量删除
+              </n-button>
+            </template>
+            确定删除选中的 {{ selectedRowKeys.length }} 个代理吗？此操作不可撤销。
+          </n-popconfirm>
+          <n-button size="small" @click="selectedRowKeys = []">
+            取消选择
+          </n-button>
+        </n-space>
+      </div>
+    </div>
+
+    <!-- 统计面板 -->
+    <n-grid :cols="5" :x-gap="16" class="stats-grid">
+      <n-grid-item>
+        <n-card size="small">
+          <n-statistic label="总代理数" :value="stats.total" />
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small">
+          <n-statistic label="活跃" :value="stats.active" />
+          <template #suffix>
+            <n-icon color="#18a058"><CheckmarkOutline /></n-icon>
+          </template>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small">
+          <n-statistic label="非活跃" :value="stats.inactive" />
+          <template #suffix>
+            <n-icon color="#909399"><CloseOutline /></n-icon>
+          </template>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small">
+          <n-statistic label="测试中" :value="stats.testing" />
+          <template #suffix>
+            <n-icon color="#f0a020"><PlayOutline /></n-icon>
+          </template>
+        </n-card>
+      </n-grid-item>
+      <n-grid-item>
+        <n-card size="small">
+          <n-statistic label="异常" :value="stats.error" />
+          <template #suffix>
+            <n-icon color="#d03050"><WarningOutline /></n-icon>
+          </template>
+        </n-card>
+      </n-grid-item>
+    </n-grid>
+
+    <!-- 筛选和搜索 -->
+    <n-card class="filter-card">
+      <n-space>
+        <n-input
+          v-model:value="searchQuery"
+          placeholder="搜索代理名称或主机"
+          clearable
+          style="width: 300px"
+        >
+          <template #prefix>
+            <n-icon><SearchOutline /></n-icon>
+          </template>
+        </n-input>
+        <n-select
+          v-model:value="selectedCategory"
+          placeholder="选择分类"
+          clearable
+          style="width: 150px"
+          :options="categoryOptions"
+        />
+        <n-select
+          v-model:value="selectedType"
+          placeholder="代理类型"
+          clearable
+          style="width: 120px"
+          :options="typeOptions"
+        />
+        <n-select
+          v-model:value="selectedStatus"
+          placeholder="状态"
+          clearable
+          style="width: 120px"
+          :options="statusOptions"
+        />
+        <n-select
+          v-model:value="selectedCountry"
+          placeholder="国家"
+          clearable
+          style="width: 120px"
+          :options="countryOptions"
+        />
+      </n-space>
+    </n-card>
+
+    <!-- 代理列表卡片 -->
+    <n-card>
+      <n-data-table
+        :columns="columns"
+        :data="filteredProxies"
+        :loading="loading"
+        :pagination="pagination"
+        :row-key="(row: Proxy) => row.id"
+        v-model:checked-row-keys="selectedRowKeys"
+      />
+    </n-card>
+
+    <!-- 添加代理模态框 -->
+    <n-modal v-model:show="showAddModal" preset="dialog" title="添加代理">
+      <n-form
+        ref="addFormRef"
+        :model="addForm"
+        :rules="addFormRules"
+        label-placement="left"
+        label-width="auto"
+        require-mark-placement="right-hanging"
+      >
+        <n-form-item label="代理名称" path="name">
+          <n-input v-model:value="addForm.name" placeholder="请输入代理名称" />
+        </n-form-item>
+        <n-form-item label="显示名称" path="display_name">
+          <n-input v-model:value="addForm.display_name" placeholder="请输入显示名称" />
+        </n-form-item>
+        <n-form-item label="描述" path="description">
+          <n-input
+            v-model:value="addForm.description"
+            type="textarea"
+            placeholder="请输入代理描述"
+            :autosize="{ minRows: 2, maxRows: 4 }"
+          />
+        </n-form-item>
+        <n-form-item label="代理类型" path="type">
+          <n-select
+            v-model:value="addForm.type"
+            placeholder="选择代理类型"
+            :options="typeOptions"
+          />
+        </n-form-item>
+        <n-form-item label="主机地址" path="host">
+          <n-input v-model:value="addForm.host" placeholder="请输入主机地址" />
+        </n-form-item>
+        <n-form-item label="端口" path="port">
+          <n-input-number
+            v-model:value="addForm.port"
+            placeholder="请输入端口号"
+            :min="1"
+            :max="65535"
+            style="width: 100%"
+          />
+        </n-form-item>
+        <n-form-item label="用户名" path="username">
+          <n-input v-model:value="addForm.username" placeholder="请输入用户名（可选）" />
+        </n-form-item>
+        <n-form-item label="密码" path="password">
+          <n-input
+            v-model:value="addForm.password"
+            type="password"
+            placeholder="请输入密码（可选）"
+            show-password-on="click"
+          />
+        </n-form-item>
+        <n-form-item label="超时时间" path="timeout">
+          <n-input-number
+            v-model:value="addForm.timeout"
+            placeholder="超时时间（秒）"
+            :min="1"
+            :max="300"
+            style="width: 100%"
+          />
+        </n-form-item>
+        <n-form-item label="国家" path="country">
+          <n-input v-model:value="addForm.country" placeholder="请输入国家（可选）" />
+        </n-form-item>
+        <n-form-item label="启用" path="enabled">
+          <n-switch v-model:value="addForm.enabled" />
+        </n-form-item>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="showAddModal = false">取消</n-button>
+          <n-button type="primary" @click="handleAddProxy" :loading="addLoading">
+            添加
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 编辑代理模态框 -->
+    <n-modal v-model:show="showEditModal" preset="dialog" title="编辑代理">
+      <n-form
+        ref="editFormRef"
+        :model="editForm"
+        :rules="addFormRules"
+        label-placement="left"
+        label-width="auto"
+        require-mark-placement="right-hanging"
+      >
+        <n-form-item label="代理名称" path="name">
+          <n-input v-model:value="editForm.name" placeholder="请输入代理名称" />
+        </n-form-item>
+        <n-form-item label="显示名称" path="display_name">
+          <n-input v-model:value="editForm.display_name" placeholder="请输入显示名称" />
+        </n-form-item>
+        <n-form-item label="描述" path="description">
+          <n-input
+            v-model:value="editForm.description"
+            type="textarea"
+            placeholder="请输入代理描述"
+            :autosize="{ minRows: 2, maxRows: 4 }"
+          />
+        </n-form-item>
+        <n-form-item label="代理类型" path="type">
+          <n-select
+            v-model:value="editForm.type"
+            placeholder="选择代理类型"
+            :options="typeOptions"
+          />
+        </n-form-item>
+        <n-form-item label="主机地址" path="host">
+          <n-input v-model:value="editForm.host" placeholder="请输入主机地址" />
+        </n-form-item>
+        <n-form-item label="端口" path="port">
+          <n-input-number
+            v-model:value="editForm.port"
+            placeholder="请输入端口号"
+            :min="1"
+            :max="65535"
+            style="width: 100%"
+          />
+        </n-form-item>
+        <n-form-item label="用户名" path="username">
+          <n-input v-model:value="editForm.username" placeholder="请输入用户名（可选）" />
+        </n-form-item>
+        <n-form-item label="密码" path="password">
+          <n-input
+            v-model:value="editForm.password"
+            type="password"
+            placeholder="请输入密码（可选）"
+            show-password-on="click"
+          />
+        </n-form-item>
+        <n-form-item label="超时时间" path="timeout">
+          <n-input-number
+            v-model:value="editForm.timeout"
+            placeholder="超时时间（秒）"
+            :min="1"
+            :max="300"
+            style="width: 100%"
+          />
+        </n-form-item>
+        <n-form-item label="国家" path="country">
+          <n-input v-model:value="editForm.country" placeholder="请输入国家（可选）" />
+        </n-form-item>
+        <n-form-item label="启用" path="enabled">
+          <n-switch v-model:value="editForm.enabled" />
+        </n-form-item>
+      </n-form>
+      <template #action>
+        <n-space>
+          <n-button @click="showEditModal = false">取消</n-button>
+          <n-button type="primary" @click="handleEditProxy" :loading="editLoading">
+            保存
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+  </div>
+</template>
+
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, h } from 'vue'
-import { NCard, NDataTable, NTag, NButton, NProgress, NAlert, NEmpty, NDescriptions, NDescriptionsItem, NIcon } from 'naive-ui'
-import { RefreshOutline, EyeOutline, TrashOutline, WifiOutline } from '@vicons/ionicons5'
+import { ref, reactive, computed, onMounted, watch } from 'vue';
+import {
+  NButton,
+  NCard,
+  NDataTable,
+  NDropdown,
+  NForm,
+  NFormItem,
+  NGrid,
+  NGridItem,
+  NIcon,
+  NInput,
+  NInputNumber,
+  NModal,
+  NPagination,
+  NPopconfirm,
+  NSelect,
+  NSpace,
+  NStatistic,
+  NSwitch,
+  NTag,
+  useMessage,
+  type DataTableColumns,
+  type FormInst,
+  type FormRules
+} from 'naive-ui';
+import {
+  AddOutline,
+  CheckmarkOutline,
+  CloseOutline,
+  EllipsisHorizontalOutline,
+  PlayOutline,
+  RefreshOutline,
+  SearchOutline,
+  TrashOutline,
+  WarningOutline
+} from '@vicons/ionicons5';
+import { proxyApi, type Proxy, type CreateProxyRequest, type ProxyStats } from '@/api/proxy';
+
+const message = useMessage();
 
 // 响应式数据
-const sessions = ref([])
-const tasks = ref([])
-const loading = ref(true)
-const refreshing = ref(false)
-const autoRefresh = ref(true)
-const refreshInterval = ref(null)
+const loading = ref(false);
+const proxies = ref<Proxy[]>([]);
+const stats = ref<ProxyStats>({
+  total: 0,
+  active: 0,
+  inactive: 0,
+  testing: 0,
+  error: 0,
+  by_type: {},
+  by_country: {},
+  average_response_time: 0,
+  success_rate: 0
+});
 
-// 获取会话列表
-const fetchSessions = async () => {
-  try {
-    // 这里应该调用实际的API
-    // const response = await fetch('/api/mcp-agent/sessions')
-    // const data = await response.json()
-    
-    // 暂时使用模拟数据
-    sessions.value = [
-      {
-        id: 'session-001',
-        status: 'active',
-        created_at: new Date().toISOString(),
-        last_activity: new Date().toISOString(),
-        task_count: 3,
-        tools_used: ['file-manager', 'web-scraper']
-      },
-      {
-        id: 'session-002',
-        status: 'idle',
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        last_activity: new Date(Date.now() - 1800000).toISOString(),
-        task_count: 1,
-        tools_used: ['database-tool']
-      },
-      {
-        id: 'session-003',
-        status: 'closed',
-        created_at: new Date(Date.now() - 7200000).toISOString(),
-        last_activity: new Date(Date.now() - 3600000).toISOString(),
-        task_count: 5,
-        tools_used: ['file-manager', 'web-scraper', 'api-client']
-      }
-    ]
-  } catch (error) {
-    console.error('获取会话列表失败:', error)
+// 搜索和筛选
+const searchQuery = ref('');
+const selectedCategory = ref<string | null>(null);
+const selectedType = ref<string | null>(null);
+const selectedStatus = ref<string | null>(null);
+const selectedCountry = ref<string | null>(null);
+
+// 表格相关
+const selectedRowKeys = ref<number[]>([]);
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50, 100],
+  onChange: (page: number) => {
+    pagination.page = page;
+    loadProxies();
+  },
+  onUpdatePageSize: (pageSize: number) => {
+    pagination.pageSize = pageSize;
+    pagination.page = 1;
+    loadProxies();
   }
-}
+});
 
-// 获取任务列表
-const fetchTasks = async () => {
-  try {
-    // 这里应该调用实际的API
-    // const response = await fetch('/api/mcp-agent/tasks')
-    // const data = await response.json()
-    
-    // 暂时使用模拟数据
-    tasks.value = [
-      {
-        id: 'task-001',
-        session_id: 'session-001',
-        type: 'single_tool',
-        status: 'running',
-        tool_name: 'file-manager',
-        progress: 65,
-        created_at: new Date().toISOString(),
-        started_at: new Date(Date.now() - 300000).toISOString(),
-        estimated_completion: new Date(Date.now() + 180000).toISOString()
-      },
-      {
-        id: 'task-002',
-        session_id: 'session-001',
-        type: 'multi_tool',
-        status: 'completed',
-        tool_name: 'web-scraper',
-        progress: 100,
-        created_at: new Date(Date.now() - 1800000).toISOString(),
-        started_at: new Date(Date.now() - 1500000).toISOString(),
-        completed_at: new Date(Date.now() - 900000).toISOString()
-      },
-      {
-        id: 'task-003',
-        session_id: 'session-002',
-        type: 'pipeline',
-        status: 'failed',
-        tool_name: 'database-tool',
-        progress: 30,
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        started_at: new Date(Date.now() - 3300000).toISOString(),
-        failed_at: new Date(Date.now() - 2700000).toISOString(),
-        error_message: '数据库连接超时'
-      },
-      {
-        id: 'task-004',
-        session_id: 'session-001',
-        type: 'autonomous',
-        status: 'pending',
-        tool_name: 'api-client',
-        progress: 0,
-        created_at: new Date(Date.now() - 60000).toISOString()
-      }
-    ]
-  } catch (error) {
-    console.error('获取任务列表失败:', error)
+// 模态框
+const showAddModal = ref(false);
+const showEditModal = ref(false);
+const addLoading = ref(false);
+const editLoading = ref(false);
+const testAllLoading = ref(false);
+const batchLoading = ref(false);
+
+// 表单
+const addFormRef = ref<FormInst | null>(null);
+const editFormRef = ref<FormInst | null>(null);
+
+const addForm = reactive<CreateProxyRequest>({
+  name: '',
+  display_name: '',
+  description: '',
+  type: 'http',
+  protocol: 'http',
+  host: '',
+  port: 8080,
+  username: '',
+  password: '',
+  timeout: 30,
+  enabled: true,
+  country: ''
+});
+
+const editForm = reactive<CreateProxyRequest & { id: number }>({
+  id: 0,
+  name: '',
+  display_name: '',
+  description: '',
+  type: 'http',
+  protocol: 'http',
+  host: '',
+  port: 8080,
+  username: '',
+  password: '',
+  timeout: 30,
+  enabled: true,
+  country: ''
+});
+
+// 表单验证规则
+const addFormRules: FormRules = {
+  name: [
+    { required: true, message: '请输入代理名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '代理名称长度应在 2-50 个字符之间', trigger: 'blur' }
+  ],
+  display_name: [
+    { required: true, message: '请输入显示名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '显示名称长度应在 2-100 个字符之间', trigger: 'blur' }
+  ],
+  type: [
+    { required: true, message: '请选择代理类型', trigger: 'change' }
+  ],
+  host: [
+    { required: true, message: '请输入主机地址', trigger: 'blur' }
+  ],
+  port: [
+    { required: true, message: '请输入端口号', trigger: 'blur' },
+    { type: 'number', min: 1, max: 65535, message: '端口号应在 1-65535 之间', trigger: 'blur' }
+  ]
+};
+
+// 选项数据
+const typeOptions = [
+  { label: 'HTTP', value: 'http' },
+  { label: 'HTTPS', value: 'https' },
+  { label: 'SOCKS4', value: 'socks4' },
+  { label: 'SOCKS5', value: 'socks5' }
+];
+
+const statusOptions = [
+  { label: '活跃', value: 'active' },
+  { label: '非活跃', value: 'inactive' },
+  { label: '测试中', value: 'testing' },
+  { label: '异常', value: 'error' }
+];
+
+const categoryOptions = ref<Array<{ label: string; value: string }>>([]);
+const countryOptions = ref<Array<{ label: string; value: string }>>([]);
+
+// 更多操作选项
+const moreOptions = [
+  {
+    label: '导出配置',
+    key: 'export'
+  },
+  {
+    label: '导入配置',
+    key: 'import'
+  },
+  {
+    label: '清理失效代理',
+    key: 'cleanup'
   }
-}
+];
 
-// 刷新数据
-const refreshData = async () => {
-  refreshing.value = true
-  try {
-    await Promise.all([fetchSessions(), fetchTasks()])
-  } finally {
-    refreshing.value = false
-    loading.value = false
-  }
-}
-
-// 获取会话状态颜色
-const getSessionStatusColor = (status: string) => {
-  switch (status) {
-    case 'active': return 'success'
-    case 'idle': return 'warning'
-    case 'closed': return 'info'
-    default: return 'info'
-  }
-}
-
-// 获取任务状态颜色
-const getTaskStatusColor = (status: string) => {
-  switch (status) {
-    case 'running': return 'warning'
-    case 'completed': return 'success'
-    case 'failed': return 'danger'
-    case 'pending': return 'info'
-    case 'cancelled': return 'info'
-    default: return 'info'
-  }
-}
-
-// 获取任务类型显示文本
-const getTaskTypeText = (type: string) => {
-  switch (type) {
-    case 'single_tool': return '单工具'
-    case 'multi_tool': return '多工具'
-    case 'pipeline': return '流水线'
-    case 'autonomous': return '自主模式'
-    default: return type
-  }
-}
-
-// 获取会话状态显示文本
-const getSessionStatusText = (status: string) => {
-  switch (status) {
-    case 'active': return '活跃'
-    case 'idle': return '空闲'
-    case 'closed': return '已关闭'
-    default: return status
-  }
-}
-
-// 获取任务状态显示文本
-const getTaskStatusText = (status: string) => {
-  switch (status) {
-    case 'running': return '运行中'
-    case 'completed': return '已完成'
-    case 'failed': return '失败'
-    case 'pending': return '等待中'
-    case 'cancelled': return '已取消'
-    default: return status
-  }
-}
-
-// 格式化时间
-const formatTime = (timeStr: string) => {
-  return new Date(timeStr).toLocaleString('zh-CN')
-}
-
-// 格式化持续时间
-const formatDuration = (startTime: string, endTime?: string) => {
-  const start = new Date(startTime)
-  const end = endTime ? new Date(endTime) : new Date()
-  const duration = Math.floor((end.getTime() - start.getTime()) / 1000)
-  
-  if (duration < 60) {
-    return `${duration}秒`
-  } else if (duration < 3600) {
-    return `${Math.floor(duration / 60)}分${duration % 60}秒`
-  } else {
-    const hours = Math.floor(duration / 3600)
-    const minutes = Math.floor((duration % 3600) / 60)
-    return `${hours}小时${minutes}分钟`
-  }
-}
-
-// 关闭会话
-const closeSession = async (sessionId: string) => {
-  try {
-    // 这里应该调用实际的API
-    // await fetch(`/api/mcp-agent/sessions/${sessionId}/close`, { method: 'POST' })
-    
-    // 模拟关闭会话
-    const session = sessions.value.find(s => s.id === sessionId)
-    if (session) {
-      session.status = 'closed'
+// 表格列定义
+const columns: DataTableColumns<Proxy> = [
+  {
+    type: 'selection'
+  },
+  {
+    title: '名称',
+    key: 'display_name',
+    width: 150,
+    ellipsis: {
+      tooltip: true
     }
-    
-    console.log(`会话 ${sessionId} 已关闭`)
-  } catch (error) {
-    console.error('关闭会话失败:', error)
-  }
-}
-
-// 取消任务
-const cancelTask = async (taskId: string) => {
-  try {
-    // 这里应该调用实际的API
-    // await fetch(`/api/mcp-agent/tasks/${taskId}/cancel`, { method: 'POST' })
-    
-    // 模拟取消任务
-    const task = tasks.value.find(t => t.id === taskId)
-    if (task) {
-      task.status = 'cancelled'
-    }
-    
-    console.log(`任务 ${taskId} 已取消`)
-  } catch (error) {
-    console.error('取消任务失败:', error)
-  }
-}
-
-// 查看任务详情
-const viewTaskDetails = (taskId: string) => {
-  // 这里可以打开任务详情对话框或跳转到详情页面
-  console.log(`查看任务详情: ${taskId}`)
-}
-
-// 设置自动刷新
-const setupAutoRefresh = () => {
-  if (autoRefresh.value) {
-    refreshInterval.value = setInterval(refreshData, 5000) // 每5秒刷新一次
-  } else {
-    if (refreshInterval.value) {
-      clearInterval(refreshInterval.value)
-      refreshInterval.value = null
-    }
-  }
-}
-
-// 组件挂载时获取数据
-onMounted(() => {
-  refreshData()
-  setupAutoRefresh()
-})
-
-// 组件卸载时清理定时器
-onUnmounted(() => {
-  if (refreshInterval.value) {
-    clearInterval(refreshInterval.value)
-  }
-})
-
-// 监听自动刷新设置变化
-const toggleAutoRefresh = () => {
-  setupAutoRefresh()
-}
-
-// 会话表格列配置
-const sessionColumns = [
-  {
-    title: '会话ID',
-    key: 'id',
-    width: 150
-  },
-  {
-    title: '状态',
-    key: 'status',
-    width: 100,
-    render: (row: any) => {
-      return h(NTag, {
-        type: getSessionStatusColor(row.status),
-        size: 'small'
-      }, { default: () => getSessionStatusText(row.status) })
-    }
-  },
-  {
-    title: '创建时间',
-    key: 'created_at',
-    width: 180,
-    render: (row: any) => formatTime(row.created_at)
-  },
-  {
-    title: '最后活动',
-    key: 'last_activity',
-    width: 180,
-    render: (row: any) => formatTime(row.last_activity)
-  },
-  {
-    title: '任务数',
-    key: 'task_count',
-    width: 80
-  },
-  {
-    title: '使用工具',
-    key: 'tools_used',
-    render: (row: any) => {
-      return row.tools_used.map((tool: string) => 
-        h(NTag, {
-          size: 'small',
-          class: 'tool-tag',
-          key: tool
-        }, { default: () => tool })
-      )
-    }
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 120,
-    render: (row: any) => {
-      if (row.status === 'active') {
-        return h(NButton, {
-          type: 'error',
-          size: 'small',
-          onClick: () => closeSession(row.id)
-        }, { default: () => '关闭' })
-      }
-      return null
-    }
-  }
-]
-
-// 任务表格列配置
-const taskColumns = [
-  {
-    title: '任务ID',
-    key: 'id',
-    width: 120
-  },
-  {
-    title: '会话ID',
-    key: 'session_id',
-    width: 120
   },
   {
     title: '类型',
     key: 'type',
-    width: 100,
-    render: (row: any) => getTaskTypeText(row.type)
+    width: 80,
+    render: (row) => {
+      const typeMap: Record<string, { color: string; text: string }> = {
+        http: { color: 'info', text: 'HTTP' },
+        https: { color: 'success', text: 'HTTPS' },
+        socks4: { color: 'warning', text: 'SOCKS4' },
+        socks5: { color: 'error', text: 'SOCKS5' }
+      };
+      const config = typeMap[row.type] || { color: 'default', text: row.type };
+      return h(NTag, { type: config.color as any }, { default: () => config.text });
+    }
+  },
+  {
+    title: '地址',
+    key: 'address',
+    width: 200,
+    render: (row) => `${row.host}:${row.port}`
   },
   {
     title: '状态',
     key: 'status',
     width: 100,
-    render: (row: any) => {
-      return h(NTag, {
-        type: getTaskStatusColor(row.status),
-        size: 'small'
-      }, { default: () => getTaskStatusText(row.status) })
+    render: (row) => {
+      const statusMap: Record<string, { color: string; text: string }> = {
+        active: { color: 'success', text: '活跃' },
+        inactive: { color: 'default', text: '非活跃' },
+        testing: { color: 'warning', text: '测试中' },
+        error: { color: 'error', text: '异常' }
+      };
+      const config = statusMap[row.status] || { color: 'default', text: row.status };
+      return h(NTag, { type: config.color as any }, { default: () => config.text });
     }
   },
   {
-    title: '工具',
-    key: 'tool_name',
-    width: 120
+    title: '国家',
+    key: 'country',
+    width: 80
   },
   {
-    title: '进度',
-    key: 'progress',
-    width: 120,
-    render: (row: any) => {
-      if (row.status === 'running') {
-        return h(NProgress, {
-          percentage: row.progress,
-          showIndicator: false,
-          height: 6
-        })
-      } else if (row.status === 'completed') {
-        return '100%'
-      } else if (row.status === 'failed') {
-        return `${row.progress}%`
+    title: '响应时间',
+    key: 'average_response_time',
+    width: 100,
+    render: (row) => row.average_response_time ? `${row.average_response_time}ms` : '-'
+  },
+  {
+    title: '成功率',
+    key: 'success_rate',
+    width: 100,
+    render: (row) => {
+      if (row.total_requests && row.successful_requests) {
+        const rate = (row.successful_requests / row.total_requests * 100).toFixed(1);
+        return `${rate}%`;
       }
-      return '-'
+      return '-';
     }
   },
   {
-    title: '创建时间',
-    key: 'created_at',
-    width: 180,
-    render: (row: any) => formatTime(row.created_at)
-  },
-  {
-    title: '持续时间',
-    key: 'duration',
-    width: 120,
-    render: (row: any) => {
-      if (row.started_at) {
-        return formatDuration(row.started_at, row.completed_at || row.failed_at)
-      }
-      return '-'
+    title: '启用',
+    key: 'enabled',
+    width: 80,
+    render: (row) => {
+      return h(NTag, { 
+        type: row.enabled ? 'success' : 'default' 
+      }, { 
+        default: () => row.enabled ? '是' : '否' 
+      });
     }
   },
   {
     title: '操作',
     key: 'actions',
-    width: 150,
-    render: (row: any) => {
-      const buttons = []
-      
-      buttons.push(
-        h(NButton, {
-          type: 'primary',
-          size: 'small',
-          onClick: () => viewTaskDetails(row.id),
-          style: { marginRight: '8px' }
-        }, {
-          default: () => '详情',
-          icon: () => h(NIcon, null, { default: () => h(EyeOutline) })
-        })
-      )
-      
-      if (row.status === 'running' || row.status === 'pending') {
-        buttons.push(
+    width: 200,
+    render: (row) => {
+      return h(NSpace, { size: 'small' }, {
+        default: () => [
           h(NButton, {
-            type: 'error',
             size: 'small',
-            onClick: () => cancelTask(row.id)
+            type: 'primary',
+            onClick: () => testProxy(row.id)
+          }, { default: () => '测试' }),
+          h(NButton, {
+            size: 'small',
+            onClick: () => editProxy(row)
+          }, { default: () => '编辑' }),
+          h(NPopconfirm, {
+            onPositiveClick: () => deleteProxy(row.id)
           }, {
-            default: () => '取消',
-            icon: () => h(NIcon, null, { default: () => h(TrashOutline) })
+            trigger: () => h(NButton, {
+              size: 'small',
+              type: 'error'
+            }, { default: () => '删除' }),
+            default: () => '确定删除此代理吗？'
           })
-        )
-      }
-      
-      return buttons
+        ]
+      });
     }
   }
-]
+];
+
+// 计算属性
+const filteredProxies = computed(() => {
+  let result = proxies.value;
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(proxy => 
+      proxy.name.toLowerCase().includes(query) ||
+      proxy.display_name.toLowerCase().includes(query) ||
+      proxy.host.toLowerCase().includes(query)
+    );
+  }
+
+  if (selectedType.value) {
+    result = result.filter(proxy => proxy.type === selectedType.value);
+  }
+
+  if (selectedStatus.value) {
+    result = result.filter(proxy => proxy.status === selectedStatus.value);
+  }
+
+  if (selectedCountry.value) {
+    result = result.filter(proxy => proxy.country === selectedCountry.value);
+  }
+
+  return result;
+});
+
+// 方法
+const loadProxies = async () => {
+  try {
+    loading.value = true;
+    const response = await proxyApi.getProxies(
+      pagination.page,
+      pagination.pageSize,
+      {
+        category: selectedCategory.value || undefined,
+        proxy_type: selectedType.value || undefined,
+        status: selectedStatus.value || undefined,
+        country: selectedCountry.value || undefined,
+        search: searchQuery.value || undefined
+      }
+    );
+    proxies.value = response.data.items || [];
+    pagination.itemCount = response.data.total || 0;
+  } catch (error) {
+    message.error('加载代理列表失败: ' + error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const loadStats = async () => {
+  try {
+    const response = await proxyApi.getProxyStats();
+    stats.value = response.data;
+  } catch (error) {
+    console.error('加载统计信息失败:', error);
+  }
+};
+
+const refreshProxies = () => {
+  loadProxies();
+  loadStats();
+};
+
+const handleAddProxy = async () => {
+  try {
+    await addFormRef.value?.validate();
+    addLoading.value = true;
+    
+    await proxyApi.createProxy({
+      ...addForm,
+      protocol: addForm.type // 设置协议与类型相同
+    });
+    
+    message.success('代理添加成功');
+    showAddModal.value = false;
+    resetAddForm();
+    refreshProxies();
+  } catch (error) {
+    message.error('添加代理失败: ' + error);
+  } finally {
+    addLoading.value = false;
+  }
+};
+
+const editProxy = (proxy: Proxy) => {
+  Object.assign(editForm, proxy);
+  showEditModal.value = true;
+};
+
+const handleEditProxy = async () => {
+  try {
+    await editFormRef.value?.validate();
+    editLoading.value = true;
+    
+    await proxyApi.updateProxy(editForm.id, {
+      ...editForm,
+      protocol: editForm.type // 设置协议与类型相同
+    });
+    
+    message.success('代理更新成功');
+    showEditModal.value = false;
+    refreshProxies();
+  } catch (error) {
+    message.error('更新代理失败: ' + error);
+  } finally {
+    editLoading.value = false;
+  }
+};
+
+const deleteProxy = async (id: number) => {
+  try {
+    await proxyApi.deleteProxy(id);
+    message.success('代理删除成功');
+    refreshProxies();
+  } catch (error) {
+    message.error('删除代理失败: ' + error);
+  }
+};
+
+const testProxy = async (id: number) => {
+  try {
+    const response = await proxyApi.testProxy(id);
+    if (response.data.success) {
+      message.success(`代理测试成功，响应时间: ${response.data.response_time}ms`);
+    } else {
+      message.warning(`代理测试失败: ${response.data.error_message}`);
+    }
+    refreshProxies();
+  } catch (error) {
+    message.error('测试代理失败: ' + error);
+  }
+};
+
+const testAllProxies = async () => {
+  try {
+    testAllLoading.value = true;
+    await proxyApi.testAllProxies();
+    message.success('批量测试已开始，请稍后查看结果');
+    refreshProxies();
+  } catch (error) {
+    message.error('批量测试失败: ' + error);
+  } finally {
+    testAllLoading.value = false;
+  }
+};
+
+const batchAction = async (action: 'enable' | 'disable' | 'delete' | 'test') => {
+  if (selectedRowKeys.value.length === 0) {
+    message.warning('请先选择要操作的代理');
+    return;
+  }
+
+  try {
+    batchLoading.value = true;
+    await proxyApi.batchOperation(action, selectedRowKeys.value);
+    
+    const actionMap = {
+      enable: '启用',
+      disable: '禁用',
+      delete: '删除',
+      test: '测试'
+    };
+    
+    message.success(`批量${actionMap[action]}成功`);
+    selectedRowKeys.value = [];
+    refreshProxies();
+  } catch (error) {
+    message.error(`批量操作失败: ${error}`);
+  } finally {
+    batchLoading.value = false;
+  }
+};
+
+const handleMoreAction = (key: string) => {
+  switch (key) {
+    case 'export':
+      // TODO: 实现导出功能
+      message.info('导出功能开发中');
+      break;
+    case 'import':
+      // TODO: 实现导入功能
+      message.info('导入功能开发中');
+      break;
+    case 'cleanup':
+      // TODO: 实现清理功能
+      message.info('清理功能开发中');
+      break;
+  }
+};
+
+const resetAddForm = () => {
+  Object.assign(addForm, {
+    name: '',
+    display_name: '',
+    description: '',
+    type: 'http',
+    protocol: 'http',
+    host: '',
+    port: 8080,
+    username: '',
+    password: '',
+    timeout: 30,
+    enabled: true,
+    country: ''
+  });
+};
+
+// 监听搜索和筛选变化
+watch([searchQuery, selectedCategory, selectedType, selectedStatus, selectedCountry], () => {
+  pagination.page = 1;
+  loadProxies();
+}, { deep: true });
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadProxies();
+  loadStats();
+  
+  // 加载国家选项
+  const countries = [...new Set(proxies.value.map(p => p.country).filter(Boolean))];
+  countryOptions.value = countries.map(country => ({ label: country, value: country }));
+});
 </script>
 
-<template>
-  <div class="proxy-status">
-    <div class="page-header">
-      <h1>代理状态监控</h1>
-      <div class="header-actions">
-        <n-button 
-          :loading="refreshing" 
-          @click="refreshData"
-        >
-          <template #icon>
-            <n-icon><RefreshOutline /></n-icon>
-          </template>
-          刷新
-        </n-button>
-        <n-button 
-          :type="autoRefresh ? 'primary' : 'default'"
-          @click="autoRefresh = !autoRefresh; toggleAutoRefresh()"
-        >
-          {{ autoRefresh ? '停止自动刷新' : '开启自动刷新' }}
-        </n-button>
-      </div>
-    </div>
-
-    <!-- 会话监控 -->
-    <n-card class="section-card">
-      <template #header>
-        <div class="card-header">
-          <span>活跃会话</span>
-          <n-tag type="info">{{ sessions.filter(s => s.status === 'active').length }} 个活跃</n-tag>
-        </div>
-      </template>
-      
-      <n-data-table 
-        :data="sessions" 
-        :columns="sessionColumns"
-        :loading="loading"
-        striped
-      />
-    </n-card>
-
-    <!-- 任务监控 -->
-    <n-card class="section-card">
-      <template #header>
-        <div class="card-header">
-          <span>任务状态</span>
-          <n-tag type="warning">{{ tasks.filter(t => t.status === 'running').length }} 个运行中</n-tag>
-        </div>
-      </template>
-      
-      <n-data-table 
-        :data="tasks" 
-        :columns="taskColumns"
-        :loading="loading"
-        striped
-      />
-      
-      <!-- 失败任务的错误信息 -->
-      <div v-for="task in tasks.filter(t => t.status === 'failed' && t.error_message)" :key="task.id" class="error-alert">
-        <n-alert
-          :title="`任务 ${task.id} 执行失败`"
-          type="error"
-          show-icon
-          :closable="false"
-        >
-          {{ task.error_message }}
-        </n-alert>
-      </div>
-    </n-card>
-  </div>
-</template>
-
 <style scoped>
-.proxy-status {
-  padding: 20px;
+.proxy-view {
+  padding: 16px;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
-.page-header h1 {
-  margin: 0;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.header-left h1 {
+  margin: 0 0 8px 0;
   font-size: 24px;
-  color: #303133;
+  font-weight: 600;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.section-card {
-  margin-bottom: 24px;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tool-tag {
-  margin-right: 4px;
-  margin-bottom: 4px;
-}
-
-.error-alert {
-  margin-top: 16px;
-}
-
-:deep(.el-table) {
+.header-left p {
+  margin: 0;
+  color: #666;
   font-size: 14px;
 }
 
-:deep(.el-table .el-table__cell) {
-  padding: 8px 0;
+.batch-actions {
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
 }
 
-:deep(.el-progress-bar__outer) {
-  background-color: #f0f0f0;
+.batch-info {
+  font-size: 14px;
+  color: #666;
+}
+
+.stats-grid {
+  margin-bottom: 16px;
+}
+
+.filter-card {
+  margin-bottom: 16px;
+}
+
+.dropdown-wrapper {
+  position: relative;
 }
 </style>

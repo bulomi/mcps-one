@@ -10,7 +10,7 @@ from app.core.database import Base
 class SystemConfig(Base):
     """系统配置模型"""
     __tablename__ = "system_configs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String(100), unique=True, index=True, nullable=False, comment="配置键")
     value = Column(Text, comment="配置值")
@@ -19,19 +19,19 @@ class SystemConfig(Base):
     description = Column(Text, comment="配置描述")
     is_public = Column(Boolean, default=False, comment="是否为公开配置")
     is_readonly = Column(Boolean, default=False, comment="是否只读")
-    
+
     # 系统字段
     created_at = Column(DateTime, default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
-    
+
     def __repr__(self):
         return f"<SystemConfig(key='{self.key}', value='{self.value}')>"
-    
+
     def get_typed_value(self) -> Any:
         """获取类型化的值"""
         if self.value is None:
             return None
-        
+
         try:
             if self.value_type == "int":
                 return int(self.value)
@@ -46,19 +46,19 @@ class SystemConfig(Base):
                 return self.value
         except (ValueError, TypeError):
             return self.value
-    
+
     def set_typed_value(self, value: Any) -> None:
         """设置类型化的值"""
         if value is None:
             self.value = None
             return
-        
+
         if self.value_type == "json":
             import json
             self.value = json.dumps(value, ensure_ascii=False)
         else:
             self.value = str(value)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
@@ -77,7 +77,7 @@ class SystemConfig(Base):
 class SystemInfo(Base):
     """系统信息模型"""
     __tablename__ = "system_info"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     metric_name = Column(String(100), index=True, nullable=False, comment="指标名称")
     metric_value = Column(Text, comment="指标值")
@@ -85,13 +85,13 @@ class SystemInfo(Base):
     unit = Column(String(20), comment="单位")
     category = Column(String(50), index=True, comment="分类")
     tags = Column(JSON, default=dict, comment="标签")
-    
+
     # 时间字段
     timestamp = Column(DateTime, default=func.now(), index=True, comment="时间戳")
-    
+
     def __repr__(self):
         return f"<SystemInfo(metric='{self.metric_name}', value='{self.metric_value}')>"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {

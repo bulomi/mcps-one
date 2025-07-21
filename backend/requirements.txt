@@ -1,10 +1,13 @@
+# Package manager
+# uv>=0.4.0  # 注释掉，因为 uv 通常全局安装
+
 # Core dependencies
-fastapi==0.104.1
+fastapi>=0.115.0
 uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 alembic==1.13.1
-pydantic==2.5.0
-pydantic-settings==2.1.0
+pydantic>=2.5.3
+pydantic-settings>=2.6.1
 
 # Database
 # psycopg2-binary==2.9.9  # PostgreSQL (optional)
@@ -15,9 +18,9 @@ passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
 
 # Utilities
-python-dotenv==1.0.0
+python-dotenv>=1.1.0
 requests==2.31.0
-httpx==0.25.2
+httpx>=0.26.0
 aiofiles==23.2.1
 aiohttp==3.9.1
 python-dateutil==2.8.2
@@ -37,8 +40,9 @@ websockets==12.0
 jsonrpclib-pelix==0.4.3.2
 
 # MCP Protocol support
-fastmcp==0.2.0
-mcp==1.0.0
+# 注意：使用兼容版本组合，避免JSONRPCMessage错误
+fastmcp==2.10.6
+mcp==1.11.0
 
 # Process management
 psutil==5.9.6
@@ -72,3 +76,6 @@ marshmallow==3.20.1
 
 # Encryption and security
 cryptography==41.0.7
+
+# Email support
+email-validator==2.2.0

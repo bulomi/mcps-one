@@ -149,86 +149,86 @@ export interface TaskQueryParams {
 export const tasksApi = {
   // 获取任务列表
   getTasks: (params?: TaskQueryParams): Promise<TaskListResponse> => {
-    return api.get('/tasks', { params })
+    return api.get('/tasks/', { params })
   },
 
   // 获取任务统计
   getTaskStats: (): Promise<TaskStatsResponse> => {
-    return api.get('/tasks/stats')
+    return api.get('/tasks/stats/')
   },
 
   // 获取最近任务
   getRecentTasks: (limit: number = 10): Promise<Task[]> => {
-    return api.get('/tasks/recent', { params: { limit } })
+    return api.get('/tasks/recent/', { params: { limit } })
   },
 
   // 获取会话相关任务
   getSessionTasks: (sessionId: string, params?: TaskQueryParams): Promise<TaskListResponse> => {
-    return api.get(`/tasks/session/${sessionId}`, { params })
+    return api.get(`/tasks/session/${sessionId}/`, { params })
   },
 
   // 获取工具相关任务
   getToolTasks: (toolId: string, params?: TaskQueryParams): Promise<TaskListResponse> => {
-    return api.get(`/tasks/tool/${toolId}`, { params })
+    return api.get(`/tasks/tool/${toolId}/`, { params })
   },
 
   // 获取任务详情
   getTask: (taskId: string): Promise<Task> => {
-    return api.get(`/tasks/${taskId}`)
+    return api.get(`/tasks/${taskId}/`)
   },
 
   // 创建任务
   createTask: (data: TaskCreateRequest): Promise<Task> => {
-    return api.post('/tasks', data)
+    return api.post('/tasks/', data)
   },
 
   // 更新任务
   updateTask: (taskId: string, data: TaskUpdateRequest): Promise<Task> => {
-    return api.put(`/tasks/${taskId}`, data)
+    return api.put(`/tasks/${taskId}/`, data)
   },
 
   // 删除任务
   deleteTask: (taskId: string): Promise<void> => {
-    return api.delete(`/tasks/${taskId}`)
+    return api.delete(`/tasks/${taskId}/`)
   },
 
   // 启动任务
   startTask: (taskId: string, data?: TaskExecutionRequest): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/start`, data)
+    return api.post(`/tasks/${taskId}/start/`, data)
   },
 
   // 完成任务
   completeTask: (taskId: string, outputData?: Record<string, any>): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/complete`, { output_data: outputData })
+    return api.post(`/tasks/${taskId}/complete/`, { output_data: outputData })
   },
 
   // 任务失败
   failTask: (taskId: string, errorMessage: string): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/fail`, { error_message: errorMessage })
+    return api.post(`/tasks/${taskId}/fail/`, { error_message: errorMessage })
   },
 
   // 取消任务
   cancelTask: (taskId: string): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/cancel`)
+    return api.post(`/tasks/${taskId}/cancel/`)
   },
 
   // 重试任务
   retryTask: (taskId: string): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/retry`)
+    return api.post(`/tasks/${taskId}/retry/`)
   },
 
   // 更新任务进度
   updateTaskProgress: (taskId: string, data: TaskProgressUpdate): Promise<Task> => {
-    return api.post(`/tasks/${taskId}/progress`, data)
+    return api.post(`/tasks/${taskId}/progress/`, data)
   },
 
   // 批量操作任务
   batchOperateTasks: (data: TaskBatchOperation): Promise<{ success_count: number; error_count: number; errors: string[] }> => {
-    return api.post('/tasks/batch', data)
+    return api.post('/tasks/batch/', data)
   },
 
   // 清理旧任务
   cleanupOldTasks: (days: number = 30): Promise<{ cleaned_count: number }> => {
-    return api.post('/tasks/cleanup', { days })
+    return api.post('/tasks/cleanup/', { days })
   }
 }

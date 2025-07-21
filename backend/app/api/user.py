@@ -14,7 +14,7 @@ from app.schemas.user import (
     UserResponse,
     UserPublicResponse
 )
-from app.services.user_service import UserService
+from app.services.users import UserService
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +28,12 @@ async def get_user_profile(
     """获取当前用户资料"""
     try:
         user_service = UserService(db)
-        
+
         # 在单用户系统中，获取或创建默认用户
         user = user_service.get_or_create_default_user()
-        
+
         return UserPublicResponse.from_orm(user)
-        
+
     except Exception as e:
         logger.error(f"获取用户资料失败: {str(e)}")
         raise HTTPException(
@@ -49,21 +49,21 @@ async def update_user_profile(
     """更新用户资料"""
     try:
         user_service = UserService(db)
-        
+
         # 获取当前用户
         current_user = user_service.get_or_create_default_user()
-        
+
         # 更新用户信息
         updated_user = user_service.update_user(current_user.id, user_data)
-        
+
         if not updated_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="用户不存在"
             )
-        
+
         return UserPublicResponse.from_orm(updated_user)
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -84,24 +84,24 @@ async def update_password(
     """修改用户密码"""
     try:
         user_service = UserService(db)
-        
+
         # 获取当前用户
         current_user = user_service.get_or_create_default_user()
-        
+
         # 更新密码
         success = user_service.update_password(current_user.id, password_data)
-        
+
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="用户不存在"
             )
-        
+
         return {
             "success": True,
             "message": "密码修改成功"
         }
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -122,21 +122,21 @@ async def update_user_preferences(
     """更新用户偏好设置"""
     try:
         user_service = UserService(db)
-        
+
         # 获取当前用户
         current_user = user_service.get_or_create_default_user()
-        
+
         # 更新偏好设置
         updated_user = user_service.update_preferences(current_user.id, preferences_data)
-        
+
         if not updated_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="用户不存在"
             )
-        
+
         return UserPublicResponse.from_orm(updated_user)
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -157,12 +157,12 @@ async def create_user(
     """创建新用户（管理员功能）"""
     try:
         user_service = UserService(db)
-        
+
         # 创建用户
         user = user_service.create_user(user_data)
-        
+
         return UserResponse.from_orm(user)
-        
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -183,12 +183,12 @@ async def get_user_stats(
     try:
         user_service = UserService(db)
         stats = user_service.get_user_stats()
-        
+
         return {
             "success": True,
             "data": stats
         }
-        
+
     except Exception as e:
         logger.error(f"获取用户统计信息失败: {str(e)}")
         raise HTTPException(

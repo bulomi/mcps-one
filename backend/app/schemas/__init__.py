@@ -77,7 +77,7 @@ __all__ = [
     "CategoryCreate",
     "CategoryUpdate",
     "CategoryResponse",
-    
+
     # 系统模式
     "ConfigValueType",
     "MetricType",
@@ -95,7 +95,7 @@ __all__ = [
     "ConfigBatchResult",
     "HealthCheck",
     "SystemSettings",
-    
+
     # 日志模式
     "LogLevel",
     "LogCategory",

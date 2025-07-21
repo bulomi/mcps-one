@@ -16,7 +16,7 @@ from app.schemas.log import (
     LogCleanupParams,
     PaginatedResponse,
 )
-from app.services.log_service import LogService
+from app.services.system import LogService
 from app.utils.response import success_response, error_response
 from app.utils.pagination import simple_paginate as paginate
 
@@ -38,26 +38,30 @@ async def get_system_logs(
     """获取系统日志"""
     try:
         log_service = LogService(db)
-        
-        # 构建查询参数
-        query_params = LogQueryParams(
-            level=level,
-            category=category,
-            start_time=start_time,
-            end_time=end_time,
-            search=search
-        )
-        
+
+        # 构建过滤条件
+        filters = {}
+        if level:
+            filters['level'] = level
+        if category:
+            filters['category'] = category
+        if start_time:
+            filters['start_time'] = start_time
+        if end_time:
+            filters['end_time'] = end_time
+        if search:
+            filters['search'] = search
+
         # 获取日志列表
         logs, total = log_service.get_system_logs(
             page=page,
             size=size,
-            query_params=query_params
+            filters=filters
         )
-        
+
         # 分页信息
         pagination = paginate(total, page, size)
-        
+
         return success_response(
             data={
                 "items": [log.to_dict() for log in logs],
@@ -78,10 +82,10 @@ async def get_system_log(
     try:
         log_service = LogService(db)
         log = log_service.get_system_log(log_id)
-        
+
         if not log:
             raise HTTPException(status_code=404, detail="日志不存在")
-        
+
         return success_response(
             data=log.to_dict(),
             message="获取系统日志详情成功"
@@ -110,29 +114,36 @@ async def get_operation_logs(
     """获取操作日志"""
     try:
         log_service = LogService(db)
-        
-        # 构建查询参数
-        query_params = LogQueryParams(
-            action=action,
-            status=status,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            user_id=user_id,
-            start_time=start_time,
-            end_time=end_time,
-            search=search
-        )
-        
+
+        # 构建过滤条件
+        filters = {}
+        if action:
+            filters['action'] = action
+        if status:
+            filters['status'] = status
+        if resource_type:
+            filters['resource_type'] = resource_type
+        if resource_id:
+            filters['resource_id'] = resource_id
+        if user_id:
+            filters['user_id'] = user_id
+        if start_time:
+            filters['start_time'] = start_time
+        if end_time:
+            filters['end_time'] = end_time
+        if search:
+            filters['search'] = search
+
         # 获取日志列表
         logs, total = log_service.get_operation_logs(
             page=page,
             size=size,
-            query_params=query_params
+            filters=filters
         )
-        
+
         # 分页信息
         pagination = paginate(total, page, size)
-        
+
         return success_response(
             data={
                 "items": [log.to_dict() for log in logs],
@@ -153,10 +164,10 @@ async def get_operation_log(
     try:
         log_service = LogService(db)
         log = log_service.get_operation_log(log_id)
-        
+
         if not log:
             raise HTTPException(status_code=404, detail="日志不存在")
-        
+
         return success_response(
             data=log.to_dict(),
             message="获取操作日志详情成功"
@@ -183,27 +194,32 @@ async def get_mcp_logs(
     """获取MCP协议日志"""
     try:
         log_service = LogService(db)
-        
-        # 构建查询参数
-        query_params = LogQueryParams(
-            tool_id=tool_id,
-            direction=direction,
-            method=method,
-            start_time=start_time,
-            end_time=end_time,
-            search=search
-        )
-        
+
+        # 构建过滤条件
+        filters = {}
+        if tool_id:
+            filters['tool_id'] = tool_id
+        if direction:
+            filters['direction'] = direction
+        if method:
+            filters['method'] = method
+        if start_time:
+            filters['start_time'] = start_time
+        if end_time:
+            filters['end_time'] = end_time
+        if search:
+            filters['search'] = search
+
         # 获取日志列表
         logs, total = log_service.get_mcp_logs(
             page=page,
             size=size,
-            query_params=query_params
+            filters=filters
         )
-        
+
         # 分页信息
         pagination = paginate(total, page, size)
-        
+
         return success_response(
             data={
                 "items": [log.to_dict() for log in logs],
@@ -224,10 +240,10 @@ async def get_mcp_log(
     try:
         log_service = LogService(db)
         log = log_service.get_mcp_log(log_id)
-        
+
         if not log:
             raise HTTPException(status_code=404, detail="日志不存在")
-        
+
         return success_response(
             data=log.to_dict(),
             message="获取MCP协议日志详情成功"
@@ -248,7 +264,7 @@ async def get_log_stats(
     """获取日志统计"""
     try:
         log_service = LogService(db)
-        
+
         # 解析时间周期
         if period == "1h":
             start_time = datetime.now() - timedelta(hours=1)
@@ -260,13 +276,12 @@ async def get_log_stats(
             start_time = datetime.now() - timedelta(days=30)
         else:
             start_time = datetime.now() - timedelta(days=1)
-        
+
         # 获取统计数据
-        stats = log_service.get_log_stats(
-            start_time=start_time,
-            log_type=log_type
+        stats = log_service.get_log_statistics(
+            period=period
         )
-        
+
         return success_response(
             data=stats,
             message="获取日志统计成功"
@@ -282,8 +297,8 @@ async def get_log_summary(
     """获取日志汇总统计"""
     try:
         log_service = LogService(db)
-        summary = log_service.get_log_summary()
-        
+        summary = log_service.get_summary_statistics()
+
         return success_response(
             data=summary,
             message="获取日志汇总统计成功"
@@ -302,7 +317,7 @@ async def cleanup_logs(
     try:
         log_service = LogService(db)
         result = log_service.cleanup_logs(cleanup_params)
-        
+
         return success_response(
             data=result,
             message="日志清理完成"
@@ -322,20 +337,21 @@ async def export_logs(
     """导出日志"""
     try:
         log_service = LogService(db)
-        
-        # 构建查询参数
-        query_params = LogQueryParams(
-            start_time=start_time,
-            end_time=end_time
-        )
-        
+
+        # 构建过滤条件
+        filters = {}
+        if start_time:
+            filters['start_time'] = start_time
+        if end_time:
+            filters['end_time'] = end_time
+
         # 导出日志
         export_result = log_service.export_logs(
             log_type=log_type,
-            query_params=query_params,
+            filters=filters,
             format=format
         )
-        
+
         return success_response(
             data=export_result,
             message="日志导出成功"
@@ -355,14 +371,14 @@ async def get_realtime_logs(
     """获取实时日志"""
     try:
         log_service = LogService(db)
-        
+
         # 获取最新日志
         logs = log_service.get_realtime_logs(
             log_type=log_type,
             level=level,
             limit=limit
         )
-        
+
         return success_response(
             data=[log.to_dict() for log in logs],
             message="获取实时日志成功"
@@ -385,25 +401,27 @@ async def search_logs(
     """搜索日志"""
     try:
         log_service = LogService(db)
-        
-        # 构建查询参数
-        query_params = LogQueryParams(
-            search=query,
-            start_time=start_time,
-            end_time=end_time
-        )
-        
+
+        # 构建过滤条件
+        filters = {
+            'search': query
+        }
+        if start_time:
+            filters['start_time'] = start_time
+        if end_time:
+            filters['end_time'] = end_time
+
         # 搜索日志
         logs, total = log_service.search_logs(
             log_type=log_type,
-            query_params=query_params,
+            filters=filters,
             page=page,
             size=size
         )
-        
+
         # 分页信息
         pagination = paginate(total, page, size)
-        
+
         return success_response(
             data={
                 "items": [log.to_dict() for log in logs],

@@ -1,7 +1,7 @@
 /**
  * MCP代理服务相关API接口
  */
-import request from '@/utils/request'
+import { api } from './utils'
 
 /**
  * 调用MCP工具
@@ -12,11 +12,7 @@ import request from '@/utils/request'
  * @returns {Promise}
  */
 export const callTool = (toolName, data) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/call`,
-    method: 'post',
-    data
-  })
+  return api.post(`/mcp-agent/tools/${toolName}/call`, data)
 }
 
 /**
@@ -25,10 +21,7 @@ export const callTool = (toolName, data) => {
  * @returns {Promise}
  */
 export const getToolCapabilities = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/capabilities`,
-    method: 'get'
-  })
+  return api.get(`/mcp-agent/tools/${toolName}/capabilities`)
 }
 
 /**
@@ -36,10 +29,7 @@ export const getToolCapabilities = (toolName) => {
  * @returns {Promise}
  */
 export const getTools = () => {
-  return request({
-    url: '/mcp-agent/tools',
-    method: 'get'
-  })
+  return api.get('/mcp-agent/tools')
 }
 
 /**
@@ -48,10 +38,7 @@ export const getTools = () => {
  * @returns {Promise}
  */
 export const getToolResources = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/resources`,
-    method: 'get'
-  })
+  return api.get(`/mcp-agent/tools/${toolName}/resources`)
 }
 
 /**
@@ -62,11 +49,7 @@ export const getToolResources = (toolName) => {
  * @returns {Promise}
  */
 export const readToolResource = (toolName, data) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/resources/read`,
-    method: 'post',
-    data
-  })
+  return api.post(`/mcp-agent/tools/${toolName}/resources/read`, data)
 }
 
 /**
@@ -75,10 +58,7 @@ export const readToolResource = (toolName, data) => {
  * @returns {Promise}
  */
 export const getToolPrompts = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/prompts`,
-    method: 'get'
-  })
+  return api.get(`/mcp-agent/tools/${toolName}/prompts`)
 }
 
 /**
@@ -90,11 +70,7 @@ export const getToolPrompts = (toolName) => {
  * @returns {Promise}
  */
 export const getToolPrompt = (toolName, data) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/prompts/get`,
-    method: 'post',
-    data
-  })
+  return api.post(`/mcp-agent/tools/${toolName}/prompts/get`, data)
 }
 
 /**
@@ -106,11 +82,7 @@ export const getToolPrompt = (toolName, data) => {
  * @returns {Promise}
  */
 export const createSession = (data) => {
-  return request({
-    url: '/mcp-agent/sessions',
-    method: 'post',
-    data
-  })
+  return api.post('/mcp-agent/sessions', data)
 }
 
 /**
@@ -122,11 +94,7 @@ export const createSession = (data) => {
  * @returns {Promise}
  */
 export const executeTask = (sessionId, data) => {
-  return request({
-    url: `/mcp-agent/sessions/${sessionId}/execute`,
-    method: 'post',
-    data
-  })
+  return api.post(`/mcp-agent/sessions/${sessionId}/execute`, data)
 }
 
 /**
@@ -135,10 +103,7 @@ export const executeTask = (sessionId, data) => {
  * @returns {Promise}
  */
 export const getTaskStatus = (taskId) => {
-  return request({
-    url: `/mcp-agent/tasks/${taskId}/status`,
-    method: 'get'
-  })
+  return api.get(`/mcp-agent/tasks/${taskId}/status/`)
 }
 
 /**
@@ -146,10 +111,7 @@ export const getTaskStatus = (taskId) => {
  * @returns {Promise}
  */
 export const healthCheck = () => {
-  return request({
-    url: '/mcp-agent/health',
-    method: 'get'
-  })
+  return api.get('/mcp-agent/health/')
 }
 
 /**
@@ -158,10 +120,7 @@ export const healthCheck = () => {
  * @returns {Promise}
  */
 export const getToolStatus = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/status`,
-    method: 'get'
-  })
+  return api.get(`/mcp-agent/tools/${toolName}/status/`)
 }
 
 /**
@@ -170,10 +129,7 @@ export const getToolStatus = (toolName) => {
  * @returns {Promise}
  */
 export const reconnectTool = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/reconnect`,
-    method: 'post'
-  })
+  return api.post(`/mcp-agent/tools/${toolName}/reconnect/`)
 }
 
 /**
@@ -182,10 +138,7 @@ export const reconnectTool = (toolName) => {
  * @returns {Promise}
  */
 export const disconnectTool = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/disconnect`,
-    method: 'post'
-  })
+  return api.post(`/mcp-agent/tools/${toolName}/disconnect/`)
 }
 
 /**
@@ -193,37 +146,12 @@ export const disconnectTool = (toolName) => {
  * @returns {Promise}
  */
 export const getConnectionStatus = () => {
-  return request({
-    url: '/mcp-agent/status',
-    method: 'get'
-  })
+  return api.get('/mcp-unified/service/status/')
 }
 
-/**
- * 重新连接MCP工具
- * @param {string} toolName - 工具名称
- * @returns {Promise}
- */
-export const reconnectTool = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/reconnect`,
-    method: 'post'
-  })
-}
 
-/**
- * 断开MCP工具连接
- * @param {string} toolName - 工具名称
- * @returns {Promise}
- */
-export const disconnectTool = (toolName) => {
-  return request({
-    url: `/mcp-agent/tools/${toolName}/disconnect`,
-    method: 'post'
-  })
-}
 
-export default {
+const mcpAgentApi = {
   callTool,
   getToolCapabilities,
   getTools,
@@ -239,3 +167,6 @@ export default {
   reconnectTool,
   disconnectTool
 }
+
+export { mcpAgentApi }
+export default mcpAgentApi

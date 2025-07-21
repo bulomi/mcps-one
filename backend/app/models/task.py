@@ -40,36 +40,36 @@ class TaskPriority(str, Enum):
 class MCPTask(Base):
     """MCP 任务模型"""
     __tablename__ = "mcp_tasks"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(String(255), unique=True, index=True, nullable=False, comment="任务ID")
-    
+
     # 任务基本信息
     name = Column(String(255), nullable=False, comment="任务名称")
     description = Column(Text, comment="任务描述")
     task_type = Column(SQLEnum(TaskType), default=TaskType.SINGLE_TOOL, comment="任务类型")
     priority = Column(SQLEnum(TaskPriority), default=TaskPriority.NORMAL, comment="任务优先级")
     status = Column(SQLEnum(TaskStatus), default=TaskStatus.PENDING, comment="任务状态")
-    
+
     # 关联信息
     session_id = Column(Integer, ForeignKey("mcp_sessions.id"), nullable=True, comment="会话ID")
     tool_id = Column(Integer, ForeignKey("mcp_tools.id"), nullable=True, comment="主要工具ID")
     user_id = Column(String(255), nullable=True, comment="用户ID")
     parent_task_id = Column(Integer, ForeignKey("mcp_tasks.id"), nullable=True, comment="父任务ID")
-    
+
     # 任务配置和数据
     input_data = Column(Text, comment="输入数据(JSON)")
     output_data = Column(Text, comment="输出数据(JSON)")
     config = Column(Text, comment="任务配置(JSON)")
     task_metadata = Column(Text, comment="任务元数据(JSON)")
-    
+
     # 执行信息
     progress = Column(Float, default=0.0, comment="执行进度(0-100)")
     error_message = Column(Text, comment="错误信息")
     error_code = Column(String(50), comment="错误代码")
     retry_count = Column(Integer, default=0, comment="重试次数")
     max_retries = Column(Integer, default=3, comment="最大重试次数")
-    
+
     # 时间信息
     created_at = Column(DateTime, default=func.now(), comment="创建时间")
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
@@ -77,18 +77,18 @@ class MCPTask(Base):
     completed_at = Column(DateTime, nullable=True, comment="完成时间")
     scheduled_at = Column(DateTime, nullable=True, comment="计划执行时间")
     timeout_at = Column(DateTime, nullable=True, comment="超时时间")
-    
+
     # 性能统计
     execution_time = Column(Float, nullable=True, comment="执行时间(秒)")
     cpu_usage = Column(Float, nullable=True, comment="CPU使用率")
     memory_usage = Column(Float, nullable=True, comment="内存使用量(MB)")
-    
+
     # 关联关系
     session = relationship("MCPSession", back_populates="tasks")
     tool = relationship("MCPTool", back_populates="tasks")
     parent_task = relationship("MCPTask", remote_side=[id], back_populates="child_tasks")
     child_tasks = relationship("MCPTask", back_populates="parent_task")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
@@ -122,71 +122,71 @@ class MCPTask(Base):
             "cpu_usage": self.cpu_usage,
             "memory_usage": self.memory_usage,
         }
-    
+
     def is_running(self) -> bool:
         """检查任务是否正在运行"""
         return self.status == TaskStatus.RUNNING
-    
+
     def is_completed(self) -> bool:
         """检查任务是否已完成"""
         return self.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.TIMEOUT]
-    
+
     def can_retry(self) -> bool:
         """检查任务是否可以重试"""
         return (
-            self.status == TaskStatus.FAILED and 
+            self.status == TaskStatus.FAILED and
             self.retry_count < self.max_retries
         )
-    
+
     def start_task(self):
         """开始任务"""
         self.status = TaskStatus.RUNNING
         self.started_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
-    
+
     def complete_task(self, output_data: Optional[str] = None):
         """完成任务"""
         self.status = TaskStatus.COMPLETED
         self.completed_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
         self.progress = 100.0
-        
+
         if output_data:
             self.output_data = output_data
-        
+
         # 计算执行时间
         if self.started_at:
             self.execution_time = (self.completed_at - self.started_at).total_seconds()
-    
+
     def fail_task(self, error_message: str, error_code: Optional[str] = None):
         """任务失败"""
         self.status = TaskStatus.FAILED
         self.completed_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
         self.error_message = error_message
-        
+
         if error_code:
             self.error_code = error_code
-        
+
         # 计算执行时间
         if self.started_at:
             self.execution_time = (self.completed_at - self.started_at).total_seconds()
-    
+
     def cancel_task(self):
         """取消任务"""
         self.status = TaskStatus.CANCELLED
         self.completed_at = datetime.utcnow()
         self.updated_at = datetime.utcnow()
-        
+
         # 计算执行时间
         if self.started_at:
             self.execution_time = (self.completed_at - self.started_at).total_seconds()
-    
+
     def update_progress(self, progress: float):
         """更新任务进度"""
         self.progress = max(0.0, min(100.0, progress))
         self.updated_at = datetime.utcnow()
-    
+
     def increment_retry(self):
         """增加重试次数"""
         self.retry_count += 1

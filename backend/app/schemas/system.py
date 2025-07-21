@@ -1,9 +1,10 @@
 """系统相关的 Pydantic 模式定义"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime
 from enum import Enum
+from app.core.log_levels import ALLOWED_LOG_LEVELS
 
 class ConfigValueType(str, Enum):
     """配置值类型枚举"""
@@ -31,8 +32,9 @@ class SystemConfigBase(BaseModel):
     description: Optional[str] = Field(None, description="配置描述")
     is_public: bool = Field(False, description="是否为公开配置")
     is_readonly: bool = Field(False, description="是否只读")
-    
-    @validator('key')
+
+    @field_validator('key')
+    @classmethod
     def validate_key(cls, v):
         """验证配置键"""
         if not v.replace('_', '').replace('.', '').replace('-', '').isalnum():
@@ -57,9 +59,8 @@ class SystemConfigResponse(SystemConfigBase):
     typed_value: Any = Field(..., description="类型化的值")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 系统信息模式
 class SystemInfoBase(BaseModel):
@@ -79,9 +80,8 @@ class SystemInfoResponse(SystemInfoBase):
     """系统信息响应模式"""
     id: int = Field(..., description="信息ID")
     timestamp: datetime = Field(..., description="时间戳")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -91,21 +91,21 @@ class SystemStatus(BaseModel):
     status: str = Field(..., description="系统状态")
     uptime: float = Field(..., description="运行时间（秒）")
     version: str = Field(..., description="系统版本")
-    
+
     # 资源使用情况
     cpu_usage: float = Field(..., description="CPU使用率（%）")
     memory_usage: float = Field(..., description="内存使用率（%）")
     disk_usage: float = Field(..., description="磁盘使用率（%）")
-    
+
     # 工具统计
     total_tools: int = Field(..., description="工具总数")
     running_tools: int = Field(..., description="运行中的工具数")
     stopped_tools: int = Field(..., description="已停止的工具数")
     error_tools: int = Field(..., description="错误状态的工具数")
-    
+
     # 数据库信息
     database_size: int = Field(..., description="数据库大小（字节）")
-    
+
     timestamp: datetime = Field(..., description="状态时间戳")
 
 class SystemStatusResponse(SystemStatus):
@@ -117,8 +117,9 @@ class SystemOperationBase(BaseModel):
     """系统操作基础模式"""
     operation: str = Field(..., description="操作类型")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="操作参数")
-    
-    @validator('operation')
+
+    @field_validator('operation')
+    @classmethod
     def validate_operation(cls, v):
         """验证操作类型"""
         allowed_operations = [
@@ -151,9 +152,10 @@ class SystemOperationResult(BaseModel):
 # 配置批量操作模式
 class ConfigBatchUpdate(BaseModel):
     """配置批量更新模式"""
-    configs: List[Dict[str, Any]] = Field(..., min_items=1, description="配置列表")
-    
-    @validator('configs')
+    configs: List[Dict[str, Any]] = Field(..., min_length=1, description="配置列表")
+
+    @field_validator('configs')
+    @classmethod
     def validate_configs(cls, v):
         """验证配置列表"""
         for config in v:
@@ -180,12 +182,11 @@ class HealthCheckResponse(HealthCheck):
     """系统健康检查响应模式"""
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="检查时间")
     duration_ms: int = Field(..., description="检查耗时（毫秒）")
-    
-    class Config:
-        from_attributes = True
-    timestamp: datetime = Field(..., description="检查时间")
-    
-    @validator('status')
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         """验证健康状态"""
         allowed_statuses = ['healthy', 'degraded', 'unhealthy']
@@ -198,23 +199,23 @@ class SystemSettings(BaseModel):
     """系统设置模式"""
     # 基础设置
     app_name: str = Field(..., description="应用名称")
-    debug_mode: bool = Field(..., description="调试模式")
+    show_title: bool = Field(..., description="显示标题")
     log_level: str = Field(..., description="日志级别")
-    
+
     # MCP 设置
     max_processes: int = Field(..., ge=1, le=50, description="最大进程数")
     process_timeout: int = Field(..., ge=5, le=300, description="进程超时时间")
     restart_delay: int = Field(..., ge=1, le=60, description="重启延迟")
-    
 
-    
+
+
     # WebSocket 设置
     heartbeat_interval: int = Field(..., ge=10, le=300, description="心跳间隔")
-    
-    @validator('log_level')
+
+    @field_validator('log_level')
+    @classmethod
     def validate_log_level(cls, v):
         """验证日志级别"""
-        allowed_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
-        if v.upper() not in allowed_levels:
-            raise ValueError(f'日志级别必须是: {", ".join(allowed_levels)}')
+        if v.upper() not in ALLOWED_LOG_LEVELS:
+            raise ValueError(f'日志级别必须是: {", ".join(ALLOWED_LOG_LEVELS)}')
         return v.upper()

@@ -13,7 +13,7 @@ from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime
 
-from ..services.mcp_unified_service import unified_service, ServiceMode
+from ..services.mcp.mcp_unified_service import unified_service, ServiceMode
 from ..utils.exceptions import MCPServiceError
 
 logger = logging.getLogger(__name__)
@@ -96,10 +96,10 @@ async def start_service(request: ServiceStartRequest, background_tasks: Backgrou
     try:
         if unified_service.is_running:
             return {"message": "服务已在运行中", "status": "already_running"}
-        
+
         # 在后台启动服务以避免阻塞
         background_tasks.add_task(unified_service.start_service, request.mode)
-        
+
         return {
             "message": "服务启动请求已提交",
             "status": "starting",
@@ -118,10 +118,10 @@ async def stop_service(request: ServiceStopRequest, background_tasks: Background
     try:
         if not unified_service.is_running:
             return {"message": "服务未在运行", "status": "not_running"}
-        
+
         # 在后台停止服务以避免阻塞
         background_tasks.add_task(unified_service.stop_service, request.mode)
-        
+
         return {
             "message": "服务停止请求已提交",
             "status": "stopping",
@@ -144,7 +144,7 @@ async def switch_service_mode(request: ServiceModeRequest, background_tasks: Bac
             request.enable_server,
             request.enable_proxy
         )
-        
+
         # 确定新模式
         if request.enable_server and request.enable_proxy:
             new_mode = "both"
@@ -154,7 +154,7 @@ async def switch_service_mode(request: ServiceModeRequest, background_tasks: Bac
             new_mode = "proxy"
         else:
             new_mode = "disabled"
-        
+
         return {
             "message": "服务模式切换请求已提交",
             "status": "switching",
@@ -174,7 +174,7 @@ async def reload_configuration(background_tasks: BackgroundTasks):
     try:
         # 在后台重新加载配置以避免阻塞
         background_tasks.add_task(unified_service.reload_configuration)
-        
+
         return {
             "message": "配置重新加载请求已提交",
             "status": "reloading"
@@ -194,11 +194,11 @@ async def get_service_metrics():
         # 这里返回模拟数据，实际实现需要从服务中收集真实指标
         import psutil
         import os
-        
+
         process = psutil.Process(os.getpid())
         memory_info = process.memory_info()
         cpu_percent = process.cpu_percent()
-        
+
         return ServiceMetricsResponse(
             total_tool_calls=0,  # TODO: 从统计中获取
             successful_calls=0,  # TODO: 从统计中获取
@@ -240,7 +240,7 @@ async def call_tool(request: ToolCallRequest):
             arguments=request.arguments,
             source=request.source
         )
-        
+
         return {
             "success": True,
             "result": result,
@@ -260,26 +260,26 @@ async def health_check():
     """MCP服务健康检查"""
     try:
         status = await unified_service.get_service_status()
-        
+
         # 判断服务健康状态
         is_healthy = True
         health_issues = []
-        
+
         if unified_service.mode != ServiceMode.DISABLED:
             if unified_service.mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
                 if not status.proxy_running:
                     is_healthy = False
                     health_issues.append("代理服务未运行")
-            
+
             if unified_service.mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
                 if not status.server_running:
                     is_healthy = False
                     health_issues.append("服务端未运行")
-        
+
         if status.last_error:
             is_healthy = False
             health_issues.append(f"最近错误: {status.last_error}")
-        
+
         return {
             "status": "healthy" if is_healthy else "unhealthy",
             "mode": status.mode.value,

@@ -17,6 +17,9 @@ import { toolsApi, type Tool } from '../api/tools'
 import { sessionsApi } from '../api/sessions'
 import { tasksApi, type Task } from '../api/tasks'
 import { useWebSocketData, useWebSocketEvents, connectWebSocket, disconnectWebSocket, EventType } from '../services/websocket'
+import { ux } from '../utils/userExperience'
+import { handleApiError } from '../utils/errorHandler'
+import { StatusMapper, TimeUtils, DataUtils } from '../utils/common'
 
 // 响应式数据
 const systemStats = ref<SystemStats>({
@@ -59,22 +62,26 @@ const fetchSystemStats = async (showLoading = true) => {
   try {
     // 获取系统统计信息
     const stats = await systemApi.getStats()
-    systemStats.value = stats
+    if (stats) {
+      systemStats.value = stats
+    }
     
     // 获取工具列表（前5个）
     const toolsResponse = await toolsApi.getTools()
-    const tools = toolsResponse.data?.items || []
-    toolsList.value = tools.slice(0, 5)
+    const normalizedTools = DataUtils.normalizeApiResponse<Tool>(toolsResponse)
+    toolsList.value = normalizedTools.slice(0, 5)
     
     // 获取最近任务数据
     const tasks = await tasksApi.getRecentTasks(5)
-    recentTasks.value = tasks
+    recentTasks.value = DataUtils.normalizeApiResponse<Task>(tasks)
     
     // 更新最后更新时间
     lastUpdateTime.value = new Date()
     
   } catch (error) {
-    console.error('获取系统统计信息失败:', error)
+    // 获取系统统计信息失败
+    // 使用增强的错误处理，支持自动重试
+    handleApiError(error, '获取系统数据失败', undefined, true)
   } finally {
     loading.value = false
     refreshing.value = false
@@ -111,7 +118,7 @@ watch(wsToolStatus, (newToolStatus) => {
 
 // 处理工具状态变更事件
 const handleToolStatusChange = (data: any) => {
-  console.log('工具状态变更:', data)
+  // 工具状态变更处理
   // 可以在这里添加通知或其他处理逻辑
 }
 
@@ -119,7 +126,20 @@ const handleToolStatusChange = (data: any) => {
 
 // 手动刷新
 const handleRefresh = async () => {
-  await fetchSystemStats(false)
+  await ux.executeWithFeedback(
+    async () => {
+      await fetchSystemStats(false)
+      return { 
+        toolsCount: toolsList.value.length,
+        tasksCount: recentTasks.value.length
+      }
+    },
+    {
+      loadingMessage: '正在刷新数据...',
+      successMessage: (result) => `刷新完成，获取到 ${result.toolsCount} 个工具和 ${result.tasksCount} 个任务`,
+      errorMessage: '刷新失败，请稍后重试'
+    }
+  )
 }
 
 // 切换自动刷新
@@ -152,54 +172,29 @@ const stopAutoRefresh = () => {
   }
 }
 
-// 格式化最后更新时间
+// 格式化最后更新时间（使用通用工具）
 const formatLastUpdateTime = () => {
-  const now = new Date()
-  const diff = Math.floor((now.getTime() - lastUpdateTime.value.getTime()) / 1000)
-  
-  if (diff < 60) {
-    return `${diff}秒前`
-  } else if (diff < 3600) {
-    return `${Math.floor(diff / 60)}分钟前`
-  } else {
-    return lastUpdateTime.value.toLocaleTimeString('zh-CN')
-  }
+  return TimeUtils.getRelativeTime(lastUpdateTime.value)
 }
 
-// 获取工具状态颜色
+// 获取工具状态颜色（使用通用工具）
 const getToolStatusColor = (status: string) => {
-  switch (status) {
-    case 'active': return 'success'
-    case 'inactive': return 'default'
-    case 'error': return 'error'
-    default: return 'info'
-  }
+  return StatusMapper.mapToolStatus(status).type
 }
 
-// 获取工具状态文本
+// 获取工具状态文本（使用通用工具）
 const getToolStatusText = (status: string) => {
-  switch (status) {
-    case 'active': return '运行中'
-    case 'inactive': return '已停止'
-    case 'error': return '错误'
-    default: return '未知'
-  }
+  return StatusMapper.mapToolStatus(status).text
 }
 
-// 获取任务状态颜色
+// 获取任务状态颜色（使用通用工具）
 const getTaskStatusColor = (status: string) => {
-  switch (status) {
-    case 'running': return 'warning'
-    case 'completed': return 'success'
-    case 'failed': return 'danger'
-    case 'pending': return 'info'
-    default: return 'info'
-  }
+  return StatusMapper.mapTaskStatus(status).type
 }
 
-// 格式化时间
+// 格式化时间（使用通用工具）
 const formatTime = (timeStr: string) => {
-  return new Date(timeStr).toLocaleString('zh-CN')
+  return TimeUtils.formatTime(timeStr)
 }
 
 // 组件挂载时获取数据
@@ -464,19 +459,13 @@ onUnmounted(() => {
 }
 
 .dashboard-header {
-  margin-bottom: 32px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  margin-bottom: 16px;
 }
 
 .header-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 24px;
+  align-items: flex-start;
 }
 
 .header-text {
@@ -485,15 +474,14 @@ onUnmounted(() => {
 
 .header-text h1 {
   margin: 0 0 8px 0;
-  font-size: 32px;
-  color: white;
+  font-size: 24px;
   font-weight: 600;
 }
 
 .header-text p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 16px;
+  color: var(--n-text-color-2);
+  font-size: 14px;
 }
 
 .header-controls {

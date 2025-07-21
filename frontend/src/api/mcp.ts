@@ -88,12 +88,12 @@ export const mcpApi = {
   // 工具调用相关
   async callTool(toolName: string, request: ToolCallRequest): Promise<ToolCallResponse> {
     const response = await api.post(`/mcp-agent/tools/${toolName}/call`, request)
-    return response.data.data
+    return response
   },
 
   async getToolCapabilities(toolName: string): Promise<ToolCapabilities> {
     const response = await api.get(`/mcp-agent/tools/${toolName}/capabilities`)
-    return response.data.data
+    return response
   },
 
   async listTools(): Promise<{
@@ -108,7 +108,7 @@ export const mcpApi = {
     total: number
   }> {
     const response = await api.get('/mcp-agent/tools')
-    return response.data.data
+    return response
   },
 
   // 资源管理相关
@@ -117,16 +117,16 @@ export const mcpApi = {
     resources: any[]
   }> {
     const response = await api.get(`/mcp-agent/tools/${toolName}/resources`)
-    return response.data.data
+    return response
   },
 
-  async readResource(toolName: string, request: ResourceReadRequest): Promise<{
+async readResource(toolName: string, request: ResourceReadRequest): Promise<{
     tool_name: string
     uri: string
     data: any
   }> {
     const response = await api.post(`/mcp-agent/tools/${toolName}/resources/read`, request)
-    return response.data.data
+    return response
   },
 
   // 提示管理相关
@@ -135,7 +135,7 @@ export const mcpApi = {
     prompts: any[]
   }> {
     const response = await api.get(`/mcp-agent/tools/${toolName}/prompts`)
-    return response.data.data
+    return response
   },
 
   async getPrompt(toolName: string, request: PromptGetRequest): Promise<{
@@ -144,7 +144,7 @@ export const mcpApi = {
     data: any
   }> {
     const response = await api.post(`/mcp-agent/tools/${toolName}/prompts/get`, request)
-    return response.data.data
+    return response
   },
 
   // 代理会话管理
@@ -157,7 +157,7 @@ export const mcpApi = {
     created_at: string
   }> {
     const response = await api.post('/mcp-agent/sessions', request)
-    return response.data.data
+    return response
   },
 
   async executeTask(sessionId: string, request: AgentExecuteRequest): Promise<{
@@ -167,12 +167,12 @@ export const mcpApi = {
     message: string
   }> {
     const response = await api.post(`/mcp-agent/sessions/${sessionId}/execute`, request)
-    return response.data.data
+    return response
   },
 
   async getTaskStatus(taskId: string): Promise<TaskResult> {
-    const response = await api.get(`/mcp-agent/tasks/${taskId}/status`)
-    return response.data.data
+    const response = await api.get(`/mcp-agent/tasks/${taskId}/status/`)
+    return response
   },
 
   // 健康检查
@@ -180,8 +180,8 @@ export const mcpApi = {
     status: string
     timestamp: string
   }> {
-    const response = await api.get('/mcp-agent/health')
-    return response.data.data
+    const response = await api.get('/mcp-agent/health/')
+    return response
   },
 
   // 工具状态管理
@@ -193,7 +193,7 @@ export const mcpApi = {
     last_check: string
   }> {
     const response = await api.get(`/mcp-agent/tools/${toolName}/status`)
-    return response.data.data
+    return response
   },
 
   async reconnectTool(toolName: string): Promise<{
@@ -201,8 +201,8 @@ export const mcpApi = {
     status: string
     message: string
   }> {
-    const response = await api.post(`/mcp-agent/tools/${toolName}/reconnect`)
-    return response.data.data
+    const response = await api.post(`/mcp-agent/tools/${toolName}/reconnect/`)
+    return response
   },
 
   async disconnectTool(toolName: string): Promise<{
@@ -210,9 +210,47 @@ export const mcpApi = {
     status: string
     message: string
   }> {
-    const response = await api.post(`/mcp-agent/tools/${toolName}/disconnect`)
-    return response.data.data
-  }
+    const response = await api.post(`/mcp-agent/tools/${toolName}/disconnect/`)
+    return response
+  },
+
+  // 会话列表管理
+  async listSessions(params?: {
+    page?: number
+    size?: number
+    status?: string
+    session_type?: string
+    tool_id?: number
+    user_id?: string
+    search?: string
+  }): Promise<{
+     items: Array<{
+       id: number
+       session_id: string
+       name: string
+       description?: string
+       status: string
+       session_type: string
+       tool_id?: number
+       user_id?: string
+       config: any
+       metadata: any
+       request_count: number
+       response_count: number
+       error_count: number
+       created_at: string
+       updated_at: string
+       last_activity_at: string
+       expires_at?: string
+     }>
+     total: number
+     page: number
+     size: number
+     pages: number
+   }> {
+     const response = await api.get('/sessions/', { params })
+     return response
+   }
 }
 
 export default mcpApi

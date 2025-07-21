@@ -89,7 +89,6 @@ export class OperationLogger {
     }
 
     this.saveLog(log)
-    console.log('[Operation Log]', log)
   }
 
   /**

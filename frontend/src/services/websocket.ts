@@ -3,6 +3,7 @@
  */
 
 import { ref, reactive } from 'vue'
+import { handleApiError } from '@/utils/errorHandler'
 
 // WebSocket 连接状态
 export enum WebSocketStatus {
@@ -95,7 +96,7 @@ class WebSocketService {
         }
         
         this.ws.onerror = (error) => {
-          console.error('WebSocket 错误:', error)
+          handleApiError(error, 'WebSocket 连接错误')
           this.status.value = WebSocketStatus.ERROR
           this.lastError.value = 'WebSocket 连接错误'
           reject(error)

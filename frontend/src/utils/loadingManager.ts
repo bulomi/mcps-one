@@ -1,8 +1,13 @@
-import { ref, Ref } from 'vue'
+import { ref, type Ref } from 'vue'
+import { GlobalLoadingManager } from '@/utils/loading'
+import { EnhancedToastManager } from '@/utils/toast'
 
 // 加载状态管理类
 export class LoadingManager {
   private static loadingStates: Map<string, Ref<boolean>> = new Map()
+  private static globalLoading = ref(false)
+  private static globalLoadingManager = GlobalLoadingManager.getInstance()
+  private static toastManager = EnhancedToastManager.getInstance()
 
   /**
    * 获取或创建加载状态
@@ -69,20 +74,63 @@ export class LoadingManager {
 
   /**
    * 包装异步操作，自动管理加载状态
-   * @param key 加载状态的唯一标识
    * @param asyncOperation 异步操作函数
-   * @returns Promise
+   * @param options 配置选项
+   * @returns Promise<T>
    */
   static async withLoading<T>(
-    key: string, 
-    asyncOperation: () => Promise<T>
+    asyncOperation: () => Promise<T>,
+    options: {
+      loadingKey?: string
+      message?: string
+      showGlobalLoading?: boolean
+      showProgress?: boolean
+      showSuccessMessage?: boolean
+      showErrorMessage?: boolean
+      onCancel?: () => void
+    } = {}
   ): Promise<T> {
+    const {
+      loadingKey = 'default',
+      message = '加载中...',
+      showGlobalLoading = false,
+      showProgress = false,
+      showSuccessMessage = false,
+      showErrorMessage = true,
+      onCancel
+    } = options
+    
+    this.setLoading(loadingKey, true)
+    
+    if (showGlobalLoading) {
+      this.globalLoadingManager.show(loadingKey, message, {
+        showProgress,
+        showCancel: !!onCancel,
+        onCancel
+      })
+    }
+    
     try {
-      this.startLoading(key)
       const result = await asyncOperation()
+      
+      // 移除自动的成功提示，避免页面切换时显示不必要的提示
+      // if (showSuccessMessage) {
+      //   this.toastManager.success('操作成功')
+      // }
+      
       return result
+    } catch (error) {
+      if (showErrorMessage) {
+        const errorMessage = error instanceof Error ? error.message : '操作失败'
+        this.toastManager.error(errorMessage)
+      }
+      throw error
     } finally {
-      this.stopLoading(key)
+      this.setLoading(loadingKey, false)
+      
+      if (showGlobalLoading) {
+        this.globalLoadingManager.hide(loadingKey)
+      }
     }
   }
 }
@@ -94,8 +142,8 @@ export function useLoading(key: string) {
   const startLoading = () => LoadingManager.startLoading(key)
   const stopLoading = () => LoadingManager.stopLoading(key)
   const setLoading = (state: boolean) => LoadingManager.setLoading(key, state)
-  const withLoading = <T>(asyncOperation: () => Promise<T>) => 
-    LoadingManager.withLoading(key, asyncOperation)
+  const withLoading = <T>(asyncOperation: () => Promise<T>, options?: any) => 
+    LoadingManager.withLoading(asyncOperation, { loadingKey: key, ...options })
 
   return {
     loading,
@@ -111,5 +159,5 @@ export const getLoadingState = (key: string) => LoadingManager.getLoadingState(k
 export const setLoading = (key: string, loading: boolean) => LoadingManager.setLoading(key, loading)
 export const startLoading = (key: string) => LoadingManager.startLoading(key)
 export const stopLoading = (key: string) => LoadingManager.stopLoading(key)
-export const withLoading = <T>(key: string, asyncOperation: () => Promise<T>) => 
-  LoadingManager.withLoading(key, asyncOperation)
+export const withLoading = <T>(asyncOperation: () => Promise<T>, options?: any) => 
+  LoadingManager.withLoading(asyncOperation, options)

@@ -1,7 +1,7 @@
 /**
  * MCP统一服务API接口
  */
-import request from '../utils/request.js'
+import { api } from './utils'
 
 export interface ServiceStatus {
   mode: 'proxy_only' | 'server_only' | 'both' | 'disabled'
@@ -51,63 +51,63 @@ export interface ToolCallResponse {
  * 获取服务状态
  */
 export const getServiceStatus = (): Promise<ServiceStatus> => {
-  return request({ method: 'GET', url: '/mcp-unified/service/status' })
+  return api.get('/mcp-unified/service/status')
 }
 
 /**
  * 启动服务
  */
 export const startService = (): Promise<{ message: string }> => {
-  return request({ method: 'POST', url: '/mcp-unified/service/start' })
+  return api.post('/mcp-unified/service/start')
 }
 
 /**
  * 停止服务
  */
 export const stopService = (): Promise<{ message: string }> => {
-  return request({ method: 'POST', url: '/mcp-unified/service/stop' })
+  return api.post('/mcp-unified/service/stop')
 }
 
 /**
  * 切换服务模式
  */
 export const switchServiceMode = (data: ServiceModeRequest): Promise<{ message: string }> => {
-  return request({ method: 'POST', url: '/mcp-unified/service/switch-mode', data })
+  return api.post('/mcp-unified/service/switch-mode', data)
 }
 
 /**
  * 重新加载配置
  */
 export const reloadConfig = (): Promise<{ message: string }> => {
-  return request({ method: 'POST', url: '/mcp-unified/service/reload-config' })
+  return api.post('/mcp-unified/service/reload-config')
 }
 
 /**
  * 获取服务指标
  */
 export const getServiceMetrics = (): Promise<ServiceMetrics> => {
-  return request({ method: 'GET', url: '/mcp-unified/service/metrics' })
+  return api.get('/mcp-unified/service/metrics')
 }
 
 /**
  * 获取可用工具列表
  */
 export const getAvailableTools = (): Promise<ToolInfo[]> => {
-  return request({ method: 'GET', url: '/mcp-unified/tools' })
+  return api.get('/mcp-unified/tools')
 }
 
 /**
  * 调用工具
  */
 export const callTool = (data: ToolCallRequest): Promise<ToolCallResponse> => {
-  return request({ method: 'POST', url: '/mcp-unified/tools/call', data })
+  return api.post('/mcp-unified/tools/call', data)
 }
 
 /**
  * 健康检查
  */
 export const healthCheck = (): Promise<{ status: string; timestamp: string }> => {
-  return request({ method: 'GET', url: '/mcp-unified/health' })
+  return api.get('/mcp-unified/health')
 }
 
 /**
@@ -126,7 +126,7 @@ export const healthCheck = (): Promise<{ status: string; timestamp: string }> =>
 //   return request({ method: 'POST', url: '/mcp-unified/config', data: config })
 // }
 
-export default {
+const mcpUnifiedApi = {
   getServiceStatus,
   startService,
   stopService,
@@ -139,3 +139,6 @@ export default {
   // getServiceConfig,     // TODO: 后端暂未实现
   // updateServiceConfig  // TODO: 后端暂未实现
 }
+
+export { mcpUnifiedApi }
+export default mcpUnifiedApi

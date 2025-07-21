@@ -1,6 +1,6 @@
 """任务管理相关的 Pydantic 模型"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
@@ -87,9 +87,8 @@ class TaskResponse(TaskBase):
     execution_time: Optional[float] = None
     cpu_usage: Optional[float] = None
     memory_usage: Optional[float] = None
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TaskListResponse(BaseModel):
@@ -140,7 +139,7 @@ class TaskProgressUpdate(BaseModel):
 
 class TaskBatchOperation(BaseModel):
     """任务批量操作模型"""
-    task_ids: List[str] = Field(..., min_items=1, description="任务ID列表")
+    task_ids: List[str] = Field(..., min_length=1, description="任务ID列表")
     action: str = Field(..., description="批量操作类型")
     force: bool = Field(False, description="是否强制执行")
     reason: Optional[str] = Field(None, description="操作原因")

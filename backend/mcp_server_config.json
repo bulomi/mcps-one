@@ -1,0 +1,52 @@
+{
+  "name": "MCPS.ONE MCP服务端",
+  "description": "MCPS.ONE统一MCP工具服务端，提供所有已配置的MCP工具",
+  "version": "1.0.0",
+  "transport": {
+    "type": "stdio",
+    "command": "python",
+    "args": [
+      "d:\\project\\MCPS.ONE\\backend\\start_mcp_server_standalone.py",
+      "--transport",
+      "stdio"
+    ],
+    "env": {
+      "PYTHONPATH": "d:\\project\\MCPS.ONE\\backend"
+    }
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "authentication": {
+    "required": false,
+    "type": "none"
+  },
+  "tools": [
+    {
+      "name": "list_available_tools",
+      "description": "列出所有可用的MCP工具"
+    },
+    {
+      "name": "call_tool",
+      "description": "调用指定的MCP工具功能"
+    },
+    {
+      "name": "get_tool_capabilities",
+      "description": "获取特定工具的能力"
+    },
+    {
+      "name": "start_tool",
+      "description": "启动指定的MCP工具"
+    },
+    {
+      "name": "stop_tool",
+      "description": "停止指定的MCP工具"
+    },
+    {
+      "name": "get_service_metrics",
+      "description": "获取服务性能指标"
+    }
+  ]
+}

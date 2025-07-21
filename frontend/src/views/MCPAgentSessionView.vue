@@ -214,6 +214,8 @@ import { Refresh as RefreshIcon } from '@vicons/ionicons5'
 import { Add as AddIcon } from '@vicons/ionicons5'
 import mcpApi, { type AgentSessionCreate, type AgentExecuteRequest, type TaskResult } from '@/api/mcp'
 import { formatTime } from "@/utils/format.js";
+import { handleApiError } from '@/utils/errorHandler'
+import { ux } from '@/utils/userExperience'
 
 interface Session {
   session_id: string
@@ -337,7 +339,7 @@ const sessionColumns: DataTableColumns<Session> = [
     key: 'created_at',
     width: 180,
     render(row) {
-      return formatTime(row.created_at)
+      return TimeUtils.formatTime(row.created_at)
     }
   },
   {
@@ -355,65 +357,41 @@ const sessionColumns: DataTableColumns<Session> = [
   }
 ]
 
-// 获取模式文本
+import { StatusMapper, RenderUtils, DataUtils, TimeUtils } from '../utils/common'
+
+// 获取模式文本（使用通用工具）
 function getModeText(mode: string) {
-  switch (mode) {
-    case 'single_tool':
-      return '单工具'
-    case 'multi_tool':
-      return '多工具'
-    case 'auto':
-      return '自动'
-    default:
-      return mode
-  }
+  return StatusMapper.mapExecutionMode(mode)
 }
 
-// 获取任务状态类型
+// 获取任务状态类型（使用通用工具）
 function getTaskStatusType(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'success'
-    case 'failed':
-    case 'cancelled':
-      return 'error'
-    case 'running':
-      return 'info'
-    case 'pending':
-      return 'warning'
-    default:
-      return 'default'
-  }
+  return StatusMapper.mapTaskStatus(status).type
 }
 
-// 获取任务状态文本
+// 获取任务状态文本（使用通用工具）
 function getTaskStatusText(status: string) {
-  switch (status) {
-    case 'pending':
-      return '等待中'
-    case 'running':
-      return '执行中'
-    case 'completed':
-      return '已完成'
-    case 'failed':
-      return '失败'
-    case 'cancelled':
-      return '已取消'
-    default:
-      return status
-  }
+  return StatusMapper.mapTaskStatus(status).text
 }
 
 // 加载工具选项
 async function loadToolOptions() {
   try {
     const response = await mcpApi.listTools()
-    toolOptions.value = response.tools.map(tool => ({
-      label: tool.name,
-      value: tool.name
-    }))
+    // 确保response存在并检查tools数组
+    if (response && response.tools && Array.isArray(response.tools)) {
+      toolOptions.value = response.tools.map(tool => ({
+        label: tool.name,
+        value: tool.name
+      }))
+    } else {
+      console.warn('工具列表数据格式异常:', response)
+      toolOptions.value = []
+    }
   } catch (error) {
     console.error('加载工具选项失败:', error)
+    handleApiError(error, '加载工具选项失败', undefined, true)
+    toolOptions.value = [] // 确保在错误情况下也有默认值
   }
 }
 
@@ -421,12 +399,32 @@ async function loadToolOptions() {
 async function loadSessions() {
   try {
     loading.value = true
-    // 注意：这里需要实际的API接口来获取会话列表
-    // 目前使用模拟数据
-    sessions.value = []
+    const response = await mcpApi.listSessions({
+      page: 1,
+      size: 50,
+      session_type: 'mcp' // 只获取MCP类型的会话
+    })
+    
+    // 确保response存在并检查数据结构
+    if (response && response.data && response.data.items && Array.isArray(response.data.items)) {
+      sessions.value = response.data.items.map(session => ({
+        session_id: session.session_id,
+        name: session.name,
+        description: session.description || '',
+        status: session.status,
+        config: session.config || {},
+        created_at: session.created_at,
+        updated_at: session.updated_at,
+        last_activity_at: session.last_activity_at
+      }))
+    } else {
+      console.warn('会话列表数据格式异常:', response)
+      sessions.value = []
+    }
   } catch (error) {
     console.error('加载会话列表失败:', error)
-    message.error('加载会话列表失败')
+    handleApiError(error, '加载会话列表失败', undefined, true)
+    sessions.value = [] // 确保在错误情况下也有默认值
   } finally {
     loading.value = false
   }
@@ -434,8 +432,17 @@ async function loadSessions() {
 
 // 刷新会话列表
 async function refreshSessions() {
-  await loadSessions()
-  message.success('会话列表已刷新')
+  await ux.executeWithFeedback(
+    async () => {
+      await loadSessions()
+      return { sessionCount: sessions.value.length }
+    },
+    {
+      loadingMessage: '正在刷新会话列表...',
+      successMessage: (result) => `会话列表已刷新，共 ${result.sessionCount} 个会话`,
+      errorMessage: '刷新会话列表失败，请稍后重试'
+    }
+  )
 }
 
 // 创建会话
@@ -444,31 +451,44 @@ async function createSession() {
   
   try {
     await createFormRef.value.validate()
-    creating.value = true
-    
-    const response = await mcpApi.createSession(createForm.value)
-    message.success('会话创建成功')
-    showCreateSession.value = false
-    
-    // 重置表单
-    createForm.value = {
-      name: '',
-      description: '',
-      config: {
-        mode: 'auto',
-        tools: [],
-        max_iterations: 10,
-        timeout: 300
-      }
-    }
-    
-    await loadSessions()
   } catch (error) {
-    console.error('创建会话失败:', error)
-    message.error('创建会话失败')
-  } finally {
-    creating.value = false
+    return // 表单验证失败
   }
+  
+  await ux.executeWithFeedback(
+    async () => {
+      const response = await mcpApi.createSession(createForm.value)
+      
+      // 验证响应数据存在
+      if (!response || !response.session_id) {
+        throw new Error('创建会话响应数据异常')
+      }
+      
+      showCreateSession.value = false
+      
+      // 重置表单
+      const sessionName = createForm.value.name
+      createForm.value = {
+        name: '',
+        description: '',
+        config: {
+          mode: 'auto',
+          tools: [],
+          max_iterations: 10,
+          timeout: 300
+        }
+      }
+      
+      await loadSessions()
+      return { sessionName, sessionId: response.session_id }
+    },
+    {
+      loadingMessage: '正在创建会话...',
+      successMessage: (result) => `会话 "${result.sessionName}" 创建成功`,
+      errorMessage: '创建会话失败，请检查输入信息后重试'
+    },
+    creating
+  )
 }
 
 // 打开任务执行
@@ -488,44 +508,67 @@ function openTaskExecution(session: Session) {
 async function executeTask() {
   if (!selectedSession.value || !executeForm.value.message) return
   
-  try {
-    executing.value = true
-    
-    // 解析上下文JSON
-    if (contextJson.value) {
-      try {
-        executeForm.value.context = JSON.parse(contextJson.value)
-      } catch (error) {
-        message.error('上下文JSON格式错误')
-        return
-      }
+  // 解析上下文JSON
+  if (contextJson.value) {
+    try {
+      executeForm.value.context = JSON.parse(contextJson.value)
+    } catch (error) {
+      message.error('上下文JSON格式错误，请检查JSON语法')
+      return
     }
-    
-    const response = await mcpApi.executeTask(selectedSession.value.session_id, executeForm.value)
-    message.success('任务已提交执行')
-    
-    // 开始轮询任务状态
-    pollTaskStatus(response.task_id)
-  } catch (error) {
-    console.error('执行任务失败:', error)
-    message.error('执行任务失败')
-  } finally {
-    executing.value = false
   }
+  
+  await ux.executeWithFeedback(
+    async () => {
+      const response = await mcpApi.executeTask(selectedSession.value!.session_id, executeForm.value)
+      
+      // 验证响应数据存在
+      if (!response || !response.task_id) {
+        throw new Error('执行任务响应数据异常')
+      }
+      
+      // 开始轮询任务状态
+      pollTaskStatus(response.task_id)
+      
+      return { 
+        taskId: response.task_id,
+        sessionName: selectedSession.value!.name
+      }
+    },
+    {
+      loadingMessage: '正在提交任务...',
+      successMessage: (result) => `任务已提交到会话 "${result.sessionName}"，任务ID: ${result.taskId}`,
+      errorMessage: '任务提交失败，请检查网络连接后重试'
+    },
+    executing
+  )
 }
 
 // 轮询任务状态
 async function pollTaskStatus(taskId: string) {
   try {
     const task = await mcpApi.getTaskStatus(taskId)
+    
+    // 验证任务数据存在
+    if (!task || !task.task_id || !task.status) {
+      console.warn('任务状态数据异常:', task)
+      return
+    }
+    
     currentTask.value = task
     
     // 如果任务还在执行中，继续轮询
     if (task.status === 'pending' || task.status === 'running') {
       setTimeout(() => pollTaskStatus(taskId), 2000)
+    } else if (task.status === 'completed') {
+      message.success('任务执行完成')
+    } else if (task.status === 'failed') {
+      message.error('任务执行失败')
     }
   } catch (error) {
     console.error('获取任务状态失败:', error)
+    handleApiError(error, '获取任务状态失败', undefined, false)
+    // 如果获取状态失败，停止轮询
   }
 }
 

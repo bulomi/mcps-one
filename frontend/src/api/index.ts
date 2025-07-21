@@ -1,77 +1,79 @@
-import axios from 'axios'
-import { ErrorHandler } from '@/utils/errorHandler'
+/**
+ * API模块统一导出
+ * 提供类型安全的API调用接口和统一的错误处理
+ */
 
-// 创建axios实例
-const api = axios.create({
-  baseURL: 'http://localhost:8000/api/v1',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-})
+// 导出核心工具和类型
+export * from './utils';
+export * from './constants';
 
-// 请求拦截器
-api.interceptors.request.use(
-  (config) => {
-    // 可以在这里添加认证token等
-    return config
+// 导出各个API模块
+export { authApi } from './auth';
+export { toolsApi } from './tools';
+export { systemApi } from './system';
+export { sessionsApi } from './sessions';
+export { mcpApi } from './mcp';
+export { mcpAgentApi } from './mcp-agent';
+export { mcpUnifiedApi } from './mcp-unified';
+
+// 导出类型定义
+export type { LoginRequest, LoginResponse, User } from './auth';
+export type { Tool, CreateToolRequest, ToolStatus, ToolStats } from './tools';
+export type { SystemStats, LogEntry, ConfigItem, SystemSettings } from './system';
+export type { Session, CreateSessionRequest } from './sessions';
+
+// 兼容性导出（保持向后兼容）
+import { api } from './utils';
+export default api;
+
+// 创建统一的API客户端实例
+export const apiClient = {
+  // 认证相关
+  auth: {
+    login: authApi.login,
+    logout: authApi.logout,
+    refreshToken: authApi.refreshToken,
+    getCurrentUser: authApi.getCurrentUser,
+    changePassword: authApi.changePassword,
   },
-  (error) => {
-    return Promise.reject(error)
-  }
-)
-
-// 响应拦截器
-api.interceptors.response.use(
-  (response) => {
-    // 如果响应数据有 data 字段，则返回 data 字段的内容
-    // 否则返回原始响应数据
-    if (response.data && typeof response.data === 'object' && 'data' in response.data) {
-      return response.data.data
-    }
-    return response.data
+  
+  // 工具管理
+  tools: {
+    getTools: toolsApi.getTools,
+    getTool: toolsApi.getTool,
+    createTool: toolsApi.createTool,
+    updateTool: toolsApi.updateTool,
+    deleteTool: toolsApi.deleteTool,
+    startTool: toolsApi.startTool,
+    stopTool: toolsApi.stopTool,
+    restartTool: toolsApi.restartTool,
+    getToolStatus: toolsApi.getToolStatus,
+    validateToolConfig: toolsApi.validateToolConfig,
+    getToolCategories: toolsApi.getToolCategories,
+    getToolTags: toolsApi.getToolTags,
+    searchTools: toolsApi.searchTools,
+    getToolStats: toolsApi.getToolStats,
+    getToolLogs: toolsApi.getToolLogs,
+    clearToolLogs: toolsApi.clearToolLogs,
+  
   },
-  (error) => {
-    // 统一错误处理，但不自动显示错误消息
-    // 让调用方决定是否显示错误消息
-    if (error.response) {
-      const { status, data } = error.response
-      switch (status) {
-        case 400:
-          error.message = data?.detail || '请求参数错误'
-          break
-        case 401:
-          error.message = '未授权访问'
-          break
-        case 403:
-          error.message = '禁止访问'
-          break
-        case 404:
-          error.message = '资源不存在'
-          break
-        case 422:
-          error.message = data?.detail || '数据验证失败'
-          break
-        case 500:
-          error.message = '服务器内部错误'
-          break
-        case 502:
-          error.message = '网关错误，服务暂时不可用'
-          break
-        case 503:
-          error.message = '服务暂时不可用，请稍后重试'
-          break
-        default:
-          error.message = data?.detail || `请求失败 (${status})`
-      }
-    } else if (error.request) {
-      error.message = '网络连接失败，请检查网络设置'
-    } else {
-      error.message = '请求失败'
-    }
-    
-    return Promise.reject(error)
-  }
-)
+  
+  // 系统管理
+  system: {
+    getStats: systemApi.getStats,
+    getLogs: systemApi.getLogs,
+    getConfigs: systemApi.getConfigs,
+    updateConfig: systemApi.updateConfig,
+    saveSettings: systemApi.saveSettings,
+    getAllSettings: systemApi.getAllSettings,
+    exportConfig: systemApi.exportConfig,
+    importConfig: systemApi.importConfig,
+    resetConfig: systemApi.resetConfig,
+    getHealthStatus: systemApi.getHealthStatus,
+  },
+};
 
-export default api
+// 导入各个API模块用于apiClient
+import { authApi } from './auth';
+import { toolsApi } from './tools';
+import { systemApi } from './system';

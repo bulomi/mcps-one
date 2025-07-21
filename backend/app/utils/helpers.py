@@ -81,33 +81,33 @@ def sanitize_filename(filename: str) -> str:
     # 移除或替换非法字符
     illegal_chars = r'[<>:"/\\|?*]'
     sanitized = re.sub(illegal_chars, '_', filename)
-    
+
     # 移除前后空格和点
     sanitized = sanitized.strip(' .')
-    
+
     # 限制长度
     if len(sanitized) > 255:
         sanitized = sanitized[:255]
-    
+
     # 确保不为空
     if not sanitized:
         sanitized = 'unnamed'
-    
+
     return sanitized
 
 def format_bytes(bytes_value: int) -> str:
     """格式化字节数为人类可读格式"""
     if bytes_value == 0:
         return "0 B"
-    
+
     units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
     unit_index = 0
     size = float(bytes_value)
-    
+
     while size >= 1024 and unit_index < len(units) - 1:
         size /= 1024
         unit_index += 1
-    
+
     return f"{size:.2f} {units[unit_index]}"
 
 def format_duration(seconds: float) -> str:
@@ -127,13 +127,13 @@ def parse_duration(duration_str: str) -> Optional[float]:
     """解析时间间隔字符串为秒数"""
     pattern = r'^(\d+(?:\.\d+)?)(ms|s|m|h|d)$'
     match = re.match(pattern, duration_str.lower())
-    
+
     if not match:
         return None
-    
+
     value, unit = match.groups()
     value = float(value)
-    
+
     multipliers = {
         'ms': 0.001,
         's': 1,
@@ -141,7 +141,7 @@ def parse_duration(duration_str: str) -> Optional[float]:
         'h': 3600,
         'd': 86400
     }
-    
+
     return value * multipliers.get(unit, 1)
 
 def get_file_size(file_path: Union[str, Path]) -> int:
@@ -160,7 +160,7 @@ def ensure_directory(dir_path: Union[str, Path]) -> Path:
 def is_port_available(port: int, host: str = 'localhost') -> bool:
     """检查端口是否可用"""
     import socket
-    
+
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             sock.settimeout(1)
@@ -205,7 +205,7 @@ def run_command(command: List[str], timeout: int = 30, cwd: Optional[str] = None
             timeout=timeout,
             cwd=cwd
         )
-        
+
         return {
             'success': result.returncode == 0,
             'returncode': result.returncode,
@@ -231,7 +231,7 @@ def get_system_info() -> Dict[str, Any]:
     """获取系统信息"""
     try:
         import platform
-        
+
         return {
             'platform': platform.platform(),
             'system': platform.system(),
@@ -292,44 +292,44 @@ def truncate_string(text: str, max_length: int = 100, suffix: str = '...') -> st
     """截断字符串"""
     if len(text) <= max_length:
         return text
-    
+
     return text[:max_length - len(suffix)] + suffix
 
 def mask_sensitive_data(data: str, mask_char: str = '*', visible_chars: int = 4) -> str:
     """遮蔽敏感数据"""
     if len(data) <= visible_chars * 2:
         return mask_char * len(data)
-    
+
     start = data[:visible_chars]
     end = data[-visible_chars:]
     middle = mask_char * (len(data) - visible_chars * 2)
-    
+
     return start + middle + end
 
 def deep_merge_dict(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> Dict[str, Any]:
     """深度合并字典"""
     result = dict1.copy()
-    
+
     for key, value in dict2.items():
         if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = deep_merge_dict(result[key], value)
         else:
             result[key] = value
-    
+
     return result
 
 def flatten_dict(data: Dict[str, Any], separator: str = '.', prefix: str = '') -> Dict[str, Any]:
     """扁平化字典"""
     result = {}
-    
+
     for key, value in data.items():
         new_key = f"{prefix}{separator}{key}" if prefix else key
-        
+
         if isinstance(value, dict):
             result.update(flatten_dict(value, separator, new_key))
         else:
             result[new_key] = value
-    
+
     return result
 
 def retry_on_exception(
@@ -342,7 +342,7 @@ def retry_on_exception(
     """重试装饰器"""
     def decorator(*args, **kwargs):
         last_exception = None
-        
+
         for attempt in range(max_retries + 1):
             try:
                 return func(*args, **kwargs)
@@ -355,37 +355,37 @@ def retry_on_exception(
                     time.sleep(wait_time)
                 else:
                     logger.error(f"函数 {func.__name__} 重试 {max_retries} 次后仍然失败: {e}")
-        
+
         raise last_exception
-    
+
     return decorator
 
 def batch_process(items: List[Any], batch_size: int = 100, processor=None):
     """批量处理数据"""
     if not processor:
         processor = lambda x: x
-    
+
     results = []
     for i in range(0, len(items), batch_size):
         batch = items[i:i + batch_size]
         batch_results = [processor(item) for item in batch]
         results.extend(batch_results)
-    
+
     return results
 
 def debounce(wait_time: float):
     """防抖装饰器"""
     def decorator(func):
         last_called = [0]
-        
+
         def wrapper(*args, **kwargs):
             import time
             now = time.time()
-            
+
             if now - last_called[0] >= wait_time:
                 last_called[0] = now
                 return func(*args, **kwargs)
-        
+
         return wrapper
     return decorator
 
@@ -393,16 +393,16 @@ def throttle(rate_limit: float):
     """节流装饰器"""
     def decorator(func):
         last_called = [0]
-        
+
         def wrapper(*args, **kwargs):
             import time
             now = time.time()
-            
+
             if now - last_called[0] >= 1.0 / rate_limit:
                 last_called[0] = now
                 return func(*args, **kwargs)
             else:
                 raise Exception(f"调用频率超过限制: {rate_limit} 次/秒")
-        
+
         return wrapper
     return decorator

@@ -1,6 +1,6 @@
 """用户相关的 Pydantic 模式定义"""
 
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -16,8 +16,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """创建用户模式"""
     password: str = Field(..., min_length=6, max_length=100, description="密码")
-    
-    @validator('password')
+
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         if len(v) < 6:
             raise ValueError('密码长度至少6位')
@@ -37,17 +38,19 @@ class UserPasswordUpdate(BaseModel):
     current_password: str = Field(..., description="当前密码")
     new_password: str = Field(..., min_length=6, max_length=100, description="新密码")
     confirm_password: str = Field(..., description="确认密码")
-    
-    @validator('confirm_password')
-    def passwords_match(cls, v, values):
-        if 'new_password' in values and v != values['new_password']:
-            raise ValueError('两次输入的密码不一致')
-        return v
-    
-    @validator('new_password')
+
+    @field_validator('new_password')
+    @classmethod
     def validate_new_password(cls, v):
         if len(v) < 6:
             raise ValueError('密码长度至少6位')
+        return v
+
+    @field_validator('confirm_password')
+    @classmethod
+    def passwords_match(cls, v, info):
+        if info.data.get('new_password') and v != info.data.get('new_password'):
+            raise ValueError('两次输入的密码不一致')
         return v
 
 class UserPreferencesUpdate(BaseModel):
@@ -56,8 +59,9 @@ class UserPreferencesUpdate(BaseModel):
     language: Optional[str] = Field(None, description="语言设置")
     timezone: Optional[str] = Field(None, description="时区设置")
     email_notifications: Optional[bool] = Field(None, description="邮件通知")
-    
-    @validator('theme')
+
+    @field_validator('theme')
+    @classmethod
     def validate_theme(cls, v):
         if v and v not in ['light', 'dark', 'auto']:
             raise ValueError('主题设置必须是 light、dark 或 auto')
@@ -79,9 +83,8 @@ class UserResponse(BaseModel):
     email_notifications: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class UserPublicResponse(BaseModel):
     """用户公开信息响应模式"""
@@ -98,6 +101,5 @@ class UserPublicResponse(BaseModel):
     email_notifications: bool
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)

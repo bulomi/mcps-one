@@ -74,7 +74,7 @@ __all__ = [
     "AuthenticationError",
     "AuthorizationError",
     "RateLimitError",
-    
+
     # 辅助函数
     "generate_id",
     "generate_session_id",

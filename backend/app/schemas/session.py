@@ -1,6 +1,6 @@
 """会话管理相关的 Pydantic 模型"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
@@ -60,9 +60,8 @@ class SessionResponse(SessionBase):
     created_at: datetime
     updated_at: datetime
     last_activity_at: datetime
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionListResponse(BaseModel):
@@ -85,7 +84,7 @@ class SessionStatsResponse(BaseModel):
     total_responses: int
     total_errors: int
     avg_session_duration: float  # 平均会话持续时间（分钟）
-    
+
 
 class SessionActivityRequest(BaseModel):
     """会话活动请求模型"""

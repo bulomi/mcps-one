@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 from app.core.database import get_db
-from app.services.session_service import SessionService
+from app.services.sessions import SessionService
 from app.schemas.session import (
     SessionCreate,
     SessionUpdate,
@@ -41,7 +41,7 @@ async def get_sessions(
     """获取会话列表"""
     try:
         service = SessionService(db)
-        
+
         # 构建过滤条件
         filters = {}
         if status:
@@ -58,17 +58,22 @@ async def get_sessions(
             filters['created_after'] = created_after
         if created_before:
             filters['created_before'] = created_before
-        
+
         sessions, total = service.get_sessions(page, size, filters)
-        
-        return SessionListResponse(
-            sessions=[SessionResponse.from_orm(session) for session in sessions],
+
+        session_list = SessionListResponse(
+            items=[SessionResponse.from_orm(session) for session in sessions],
             total=total,
             page=page,
             size=size,
             pages=(total + size - 1) // size
         )
-        
+
+        return success_response(
+            data=session_list.model_dump(),
+            message="获取会话列表成功"
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取会话列表失败: {str(e)}")
 
@@ -80,7 +85,7 @@ async def get_session_stats(db: Session = Depends(get_db)):
         service = SessionService(db)
         stats = service.get_session_stats()
         return stats
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取会话统计失败: {str(e)}")
 
@@ -94,12 +99,12 @@ async def get_recent_sessions(
     try:
         service = SessionService(db)
         sessions = service.get_recent_sessions(limit)
-        
+
         return success_response(
             data=[SessionResponse.from_orm(session) for session in sessions],
             message="获取最近会话成功"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取最近会话失败: {str(e)}")
 
@@ -113,12 +118,12 @@ async def get_session(
     try:
         service = SessionService(db)
         session = service.get_session(session_id)
-        
+
         if not session:
             raise HTTPException(status_code=404, detail=f"会话不存在: {session_id}")
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -134,9 +139,9 @@ async def create_session(
     try:
         service = SessionService(db)
         session = service.create_session(session_data)
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except SessionOperationError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -153,9 +158,9 @@ async def update_session(
     try:
         service = SessionService(db)
         session = service.update_session(session_id, session_data)
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except SessionOperationError as e:
@@ -173,12 +178,12 @@ async def delete_session(
     try:
         service = SessionService(db)
         success = service.delete_session(session_id)
-        
+
         if success:
             return success_response(message="会话删除成功")
         else:
             raise HTTPException(status_code=400, detail="删除会话失败")
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -194,9 +199,9 @@ async def activate_session(
     try:
         service = SessionService(db)
         session = service.activate_session(session_id)
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except SessionOperationError as e:
@@ -214,9 +219,9 @@ async def deactivate_session(
     try:
         service = SessionService(db)
         session = service.deactivate_session(session_id)
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except SessionOperationError as e:
@@ -234,9 +239,9 @@ async def terminate_session(
     try:
         service = SessionService(db)
         session = service.terminate_session(session_id)
-        
+
         return SessionResponse.from_orm(session)
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except SessionOperationError as e:
@@ -254,10 +259,10 @@ async def update_session_activity(
     """更新会话活动"""
     try:
         service = SessionService(db)
-        
+
         # 更新活动时间
         session = service.update_session_activity(session_id)
-        
+
         # 根据活动类型增加相应计数
         if activity_data.activity_type == "request":
             session = service.increment_session_request(session_id)
@@ -265,7 +270,7 @@ async def update_session_activity(
             session = service.increment_session_response(session_id)
         elif activity_data.activity_type == "error":
             session = service.increment_session_error(session_id)
-        
+
         return SessionActivityResponse(
             session_id=session.session_id,
             activity_type=activity_data.activity_type,
@@ -274,7 +279,7 @@ async def update_session_activity(
             response_count=session.response_count,
             error_count=session.error_count
         )
-        
+
     except SessionNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -287,11 +292,11 @@ async def cleanup_expired_sessions(db: Session = Depends(get_db)):
     try:
         service = SessionService(db)
         count = service.cleanup_expired_sessions()
-        
+
         return success_response(
             data={"cleaned_count": count},
             message=f"清理过期会话完成，共清理 {count} 个会话"
         )
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"清理过期会话失败: {str(e)}")

@@ -15,13 +15,13 @@
               </template>
               刷新
             </n-button>
-            <n-button @click="exportLogs">
+            <n-button @click="exportLogsAction">
               <template #icon>
                 <n-icon><DownloadOutline /></n-icon>
               </template>
               导出
             </n-button>
-            <n-button type="error" @click="showCleanupModal = true">
+            <n-button type="error" @click="cleanupLogsAction">
               <template #icon>
                 <n-icon><TrashOutline /></n-icon>
               </template>
@@ -216,7 +216,7 @@
       <template #action>
         <n-space>
           <n-button @click="showCleanupModal = false">取消</n-button>
-          <n-button type="error" @click="cleanupLogs" :loading="cleanupLoading">
+          <n-button type="error" @click="cleanupLogsAction">
             确认清理
           </n-button>
         </n-space>
@@ -251,6 +251,7 @@ import {
   NInputNumber,
   NCheckboxGroup,
   NCheckbox,
+  useMessage,
   type DataTableColumns
 } from 'naive-ui'
 import {
@@ -260,13 +261,17 @@ import {
   SearchOutline,
   EyeOutline
 } from '@vicons/ionicons5'
-import { getLogSummary, getAllLogs, cleanupLogs, exportLogs } from '@/api/logs'
+import { getLogSummary, getSystemLogs, getOperationLogs, getMcpLogs, cleanupLogs, exportLogs } from '@/api/logs'
 import { formatBytes, formatDateTime, formatDuration } from '@/utils/format'
+import { handleApiError } from '@/utils/errorHandler'
+import { ux } from '@/utils/userExperience'
+import { logLevelOptions } from '@/constants/logLevels'
 
 // 消息提示函数
+const message = useMessage()
+
 const showMessage = (type: 'success' | 'error' | 'info' | 'warning', content: string) => {
-  console.log(`[${type.toUpperCase()}] ${content}`)
-  // 这里可以使用其他方式显示消息，比如浏览器通知或自定义组件
+  message[type](content)
 }
 
 // 响应式数据
@@ -319,13 +324,8 @@ const logTypeOptions = [
   { label: 'MCP日志', value: 'mcp' }
 ]
 
-const levelOptions = [
-  { label: 'DEBUG', value: 'DEBUG' },
-  { label: 'INFO', value: 'INFO' },
-  { label: 'WARNING', value: 'WARNING' },
-  { label: 'ERROR', value: 'ERROR' },
-  { label: 'CRITICAL', value: 'CRITICAL' }
-]
+// 使用统一的日志级别定义
+const levelOptions = logLevelOptions
 
 const sourceOptions = [
   { label: '系统', value: 'system' },
@@ -406,21 +406,22 @@ const logColumns: DataTableColumns<any> = [
 // 方法
 const loadLogStats = async () => {
   try {
-    const response = await getLogSummary()
+    const apiData = await getLogSummary()
+    // 响应拦截器已经提取了data字段，直接使用返回的数据
     logStats.value = {
-       total: response.data.total_logs || 0,
-       error: response.data.error_logs || 0,
-       warning: response.data.warning_logs || 0,
-       today: response.data.today_logs || 0
+       total: apiData.overview?.total_logs || 0,
+       errors: apiData.overview?.today_errors || 0,
+       warnings: (apiData.system_logs?.errors || 0) + (apiData.operation_logs?.errors || 0) + (apiData.mcp_logs?.errors || 0),
+       today: apiData.overview?.today_logs || 0
      }
   } catch (error) {
     console.error('加载日志统计失败:', error)
-    showMessage('error', '加载日志统计失败')
+    handleApiError(error, '加载日志统计失败', undefined, true)
     // 使用默认值
      logStats.value = {
        total: 0,
-       error: 0,
-       warning: 0,
+       errors: 0,
+       warnings: 0,
        today: 0
      }
   }
@@ -430,14 +431,18 @@ const loadLogs = async () => {
   loading.value = true
   try {
     const params = {
-       page: pagination.page,
-       size: pagination.pageSize,
-       logType: filters.logType,
-       level: filters.level,
-       source: filters.source,
-       search: filters.search,
-       dateRange: filters.dateRange
+       page: pagination.value.page,
+       size: pagination.value.pageSize,
+       level: filters.value.level,
+       category: filters.value.source,
+       search: filters.value.search
      }
+    
+    // 处理时间范围
+    if (filters.value.dateRange && filters.value.dateRange.length === 2) {
+      params.start_time = new Date(filters.value.dateRange[0]).toISOString()
+      params.end_time = new Date(filters.value.dateRange[1]).toISOString()
+    }
     
     // 过滤空值
     Object.keys(params).forEach(key => {
@@ -446,12 +451,29 @@ const loadLogs = async () => {
       }
     })
     
-    const response = await getAllLogs(params)
-    logs.value = response.data.items || []
-    pagination.value.itemCount = response.data.total || 0
+    // 根据日志类型调用不同的API
+    let apiData
+    const logType = filters.value.logType || 'system'
+    
+    switch (logType) {
+      case 'operation':
+        apiData = await getOperationLogs(params)
+        break
+      case 'mcp':
+        apiData = await getMcpLogs(params)
+        break
+      case 'system':
+      default:
+        apiData = await getSystemLogs(params)
+        break
+    }
+    
+    // 响应拦截器已经提取了data字段，直接使用返回的数据
+    logs.value = apiData.items || []
+    pagination.value.itemCount = apiData.pagination?.total || apiData.total || 0
   } catch (error) {
     console.error('加载日志失败:', error)
-    showMessage('error', '加载日志失败')
+    handleApiError(error, '加载日志失败', undefined, true)
     logs.value = []
     pagination.value.itemCount = 0
   } finally {
@@ -460,8 +482,20 @@ const loadLogs = async () => {
 }
 
 const refreshLogs = async () => {
-  await Promise.all([loadLogStats(), loadLogs()])
-  showMessage('success', '日志数据已刷新')
+  await ux.executeWithFeedback(
+    async () => {
+      await Promise.all([loadLogStats(), loadLogs()])
+      return { 
+        totalLogs: logStats.value.total,
+        currentPage: logs.value.length
+      }
+    },
+    {
+      loadingMessage: '正在刷新日志数据...',
+      successMessage: (result) => `日志数据已刷新，共 ${result.totalLogs} 条日志，当前页 ${result.currentPage} 条`,
+      errorMessage: '刷新日志数据失败，请稍后重试'
+    }
+  )
 }
 
 const applyFilters = () => {
@@ -496,62 +530,79 @@ const viewLogDetail = (log: any) => {
   showDetailModal.value = true
 }
 
-const exportLogs = async () => {
-  try {
-    const params = {
-       log_type: filters.logType || 'system',
-       format: 'csv',
-       level: filters.level,
-       category: filters.source,
-       search: filters.search
-     }
-     
-     // 处理时间范围
-     if (filters.dateRange && filters.dateRange.length === 2) {
-       params.start_time = new Date(filters.dateRange[0]).toISOString()
-       params.end_time = new Date(filters.dateRange[1]).toISOString()
-     }
-    
-    // 过滤空值
-    Object.keys(params).forEach(key => {
-      if (params[key] === '' || params[key] === null || params[key] === undefined) {
-        delete params[key]
-      }
-    })
-    
-    const response = await exportLogs(params)
-    
-    // 创建下载链接
-    const blob = new Blob([response.data], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `logs_${new Date().toISOString().split('T')[0]}.csv`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    
-    showMessage('success', '日志导出成功')
-  } catch (error) {
-    console.error('导出日志失败:', error)
-    showMessage('error', '导出日志失败')
-  }
+const exportLogsAction = async () => {
+  await ux.executeWithFeedback(
+    async () => {
+      const params = {
+         log_type: filters.value.logType || 'system',
+         format: 'csv',
+         level: filters.value.level,
+         category: filters.value.source,
+         search: filters.value.search
+       }
+       
+       // 处理时间范围
+       if (filters.value.dateRange && filters.value.dateRange.length === 2) {
+         params.start_time = new Date(filters.value.dateRange[0]).toISOString()
+         params.end_time = new Date(filters.value.dateRange[1]).toISOString()
+       }
+      
+      // 过滤空值
+      Object.keys(params).forEach(key => {
+        if (params[key] === '' || params[key] === null || params[key] === undefined) {
+          delete params[key]
+        }
+      })
+      
+      const response = await exportLogs(params)
+      
+      // 创建下载链接
+      const blob = new Blob([response.data], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const filename = `logs_${new Date().toISOString().split('T')[0]}.csv`
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      return { filename, size: blob.size }
+    },
+    {
+      loadingMessage: '正在导出日志...',
+      successMessage: (result) => `日志导出成功：${result.filename} (${(result.size / 1024).toFixed(1)} KB)`,
+      errorMessage: '导出日志失败，请稍后重试'
+    }
+  )
 }
 
-const cleanupLogs = async () => {
-  cleanupLoading.value = true
-  try {
-    await cleanupLogs(cleanupForm)
-    
-    showCleanupModal.value = false
-    showMessage('success', '日志清理完成')
-    await refreshLogs()
-  } catch (error) {
-    console.error('清理日志失败:', error)
-    showMessage('error', '清理日志失败')
-  } finally {
-    cleanupLoading.value = false
+const cleanupLogsAction = async () => {
+  const confirmed = await ux.confirmAction(
+    '清理日志',
+    `确定要清理 ${cleanupForm.value.retentionDays} 天前的日志吗？此操作不可撤销。`
+  )
+  
+  if (confirmed) {
+    await ux.executeWithFeedback(
+      async () => {
+        const result = await cleanupLogs(cleanupForm.value)
+        
+        showCleanupModal.value = false
+        await refreshLogs()
+        
+        return { 
+          deletedCount: result.deletedCount || 0,
+          retentionDays: cleanupForm.value.retentionDays
+        }
+      },
+      {
+        loadingMessage: '正在清理日志...',
+        successMessage: (result) => `日志清理完成，删除了 ${result.deletedCount} 条 ${result.retentionDays} 天前的日志`,
+        errorMessage: '清理日志失败，请稍后重试'
+      }
+    )
   }
 }
 

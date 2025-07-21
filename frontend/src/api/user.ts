@@ -53,31 +53,31 @@ export interface UserStats {
 export const userApi = {
   // 获取用户资料
   getProfile: async (): Promise<UserProfile> => {
-    const response = await api.get('/user/profile')
+    const response = await api.get('/user/profile/')
     return response.data
   },
 
   // 更新用户资料
   updateProfile: async (data: UserUpdateData): Promise<UserProfile> => {
-    const response = await api.put('/user/profile', data)
+    const response = await api.put('/user/profile/', data)
     return response.data
   },
 
   // 修改密码
   updatePassword: async (data: PasswordUpdateData): Promise<{ success: boolean; message: string }> => {
-    const response = await api.put('/user/password', data)
+    const response = await api.put('/user/password/', data)
     return response.data
   },
 
   // 更新用户偏好设置
   updatePreferences: async (data: UserPreferences): Promise<UserProfile> => {
-    const response = await api.put('/user/preferences', data)
+    const response = await api.put('/user/preferences/', data)
     return response.data
   },
 
   // 获取用户统计信息
   getStats: async (): Promise<UserStats> => {
-    const response = await api.get('/user/stats')
+    const response = await api.get('/user/stats/')
     return response.data.data
   }
 }

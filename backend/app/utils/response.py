@@ -19,11 +19,12 @@ def success_response(
         "data": data,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code,
-        headers=headers
+        headers=headers,
+        media_type="application/json; charset=utf-8"
     )
 
 def error_response(
@@ -41,11 +42,12 @@ def error_response(
         "details": details,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code,
-        headers=headers
+        headers=headers,
+        media_type="application/json; charset=utf-8"
     )
 
 def paginated_response(
@@ -58,7 +60,7 @@ def paginated_response(
 ) -> JSONResponse:
     """分页响应"""
     total_pages = (total + size - 1) // size  # 向上取整
-    
+
     response_data = {
         "success": True,
         "message": message,
@@ -73,10 +75,11 @@ def paginated_response(
         },
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
-        status_code=status_code
+        status_code=status_code,
+        media_type="application/json; charset=utf-8"
     )
 
 def validation_error_response(
@@ -92,10 +95,11 @@ def validation_error_response(
         "details": errors,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
-        status_code=status_code
+        status_code=status_code,
+        media_type="application/json; charset=utf-8"
     )
 
 def not_found_response(
@@ -106,14 +110,14 @@ def not_found_response(
     """资源未找到响应"""
     if message is None:
         message = f"{resource}未找到"
-    
+
     response_data = {
         "success": False,
         "message": message,
         "error_code": "NOT_FOUND",
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code
@@ -130,7 +134,7 @@ def unauthorized_response(
         "error_code": "UNAUTHORIZED",
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code
@@ -147,7 +151,7 @@ def forbidden_response(
         "error_code": "FORBIDDEN",
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code
@@ -166,7 +170,7 @@ def server_error_response(
         "error_id": error_id,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code
@@ -185,11 +189,11 @@ def rate_limit_response(
         "retry_after": retry_after,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     headers = {}
     if retry_after:
         headers["Retry-After"] = str(retry_after)
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code,
@@ -209,11 +213,11 @@ def created_response(
         "data": data,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     headers = {}
     if location:
         headers["Location"] = location
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code,
@@ -244,7 +248,7 @@ def accepted_response(
         "task_id": task_id,
         "timestamp": datetime.utcnow().isoformat()
     }
-    
+
     return JSONResponse(
         content=response_data,
         status_code=status_code
@@ -252,7 +256,7 @@ def accepted_response(
 
 class ResponseFormatter:
     """响应格式化器"""
-    
+
     @staticmethod
     def format_model_response(model_instance: Any) -> Dict[str, Any]:
         """格式化模型响应"""
@@ -268,19 +272,19 @@ class ResponseFormatter:
                         data[key] = value
             return data
         return model_instance
-    
+
     @staticmethod
     def format_list_response(items: List[Any]) -> List[Dict[str, Any]]:
         """格式化列表响应"""
         return [ResponseFormatter.format_model_response(item) for item in items]
-    
+
     @staticmethod
     def sanitize_response_data(data: Any) -> Any:
         """清理响应数据，移除敏感信息"""
         if isinstance(data, dict):
             sanitized = {}
             sensitive_fields = ['password', 'token', 'secret', 'key', 'private']
-            
+
             for key, value in data.items():
                 if any(field in key.lower() for field in sensitive_fields):
                     sanitized[key] = "[REDACTED]"
@@ -310,7 +314,7 @@ class ResponseStatus:
     CREATED = status.HTTP_201_CREATED
     ACCEPTED = status.HTTP_202_ACCEPTED
     NO_CONTENT = status.HTTP_204_NO_CONTENT
-    
+
     BAD_REQUEST = status.HTTP_400_BAD_REQUEST
     UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
     FORBIDDEN = status.HTTP_403_FORBIDDEN
@@ -319,7 +323,7 @@ class ResponseStatus:
     CONFLICT = status.HTTP_409_CONFLICT
     UNPROCESSABLE_ENTITY = status.HTTP_422_UNPROCESSABLE_ENTITY
     TOO_MANY_REQUESTS = status.HTTP_429_TOO_MANY_REQUESTS
-    
+
     INTERNAL_SERVER_ERROR = status.HTTP_500_INTERNAL_SERVER_ERROR
     BAD_GATEWAY = status.HTTP_502_BAD_GATEWAY
     SERVICE_UNAVAILABLE = status.HTTP_503_SERVICE_UNAVAILABLE
@@ -336,7 +340,7 @@ class ErrorCode:
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
     INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR"
     SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE"
-    
+
     # 业务错误代码
     TOOL_NOT_FOUND = "TOOL_NOT_FOUND"
     TOOL_ALREADY_EXISTS = "TOOL_ALREADY_EXISTS"

@@ -146,6 +146,23 @@
             <input 
               type="radio" 
               name="mode" 
+              value="fastmcp_proxy" 
+              v-model="selectedMode"
+              @change="switchMode"
+              :disabled="loading"
+            >
+            <span class="mode-text">
+              <strong>FastMCP 代理模式</strong>
+              <small>启用基于 FastMCP 2.0 的高性能代理服务器</small>
+            </span>
+          </label>
+        </div>
+        
+        <div class="mode-option">
+          <label class="mode-label">
+            <input 
+              type="radio" 
+              name="mode" 
               value="disabled" 
               v-model="selectedMode"
               @change="switchMode"
@@ -226,7 +243,7 @@
 
 <script>
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { useMessage } from 'naive-ui'
 import {
   getServiceStatus,
   startService,
@@ -242,6 +259,7 @@ import {
 export default {
   name: 'MCPUnifiedManager',
   setup() {
+    const message = useMessage()
     const loading = ref(false)
     const loadingText = ref('')
     const serviceStatus = ref(null)
@@ -274,6 +292,7 @@ export default {
         'proxy_only': '仅代理',
         'server_only': '仅服务端',
         'both': '双模式',
+        'fastmcp_proxy': 'FastMCP代理',
         'disabled': '已禁用'
       }
       return modeMap[serviceStatus.value.mode] || serviceStatus.value.mode
@@ -287,7 +306,7 @@ export default {
         selectedMode.value = data.mode
       } catch (error) {
         console.error('获取服务状态失败:', error)
-        ElMessage.error('获取服务状态失败')
+        message.error('获取服务状态失败')
       }
     }
 
@@ -298,7 +317,7 @@ export default {
         tools.value = data
       } catch (error) {
         console.error('获取工具列表失败:', error)
-        ElMessage.error('获取工具列表失败')
+        message.error('获取工具列表失败')
       }
     }
 
@@ -318,11 +337,11 @@ export default {
       loadingText.value = '正在启动服务...'
       try {
         await startService()
-        ElMessage.success('服务启动成功')
+        message.success('服务启动成功')
         await getServiceStatusData()
       } catch (error) {
         console.error('启动服务失败:', error)
-        ElMessage.error('启动服务失败')
+        message.error('启动服务失败')
       } finally {
         loading.value = false
       }
@@ -334,11 +353,11 @@ export default {
       loadingText.value = '正在停止服务...'
       try {
         await stopService()
-        ElMessage.success('服务停止成功')
+        message.success('服务停止成功')
         await getServiceStatusData()
       } catch (error) {
         console.error('停止服务失败:', error)
-        ElMessage.error('停止服务失败')
+        message.error('停止服务失败')
       } finally {
         loading.value = false
       }
@@ -350,11 +369,11 @@ export default {
       loadingText.value = '正在重载配置...'
       try {
         await reloadConfig()
-        ElMessage.success('配置重载成功')
+        message.success('配置重载成功')
         await getServiceStatusData()
       } catch (error) {
         console.error('重载配置失败:', error)
-        ElMessage.error('重载配置失败')
+        message.error('重载配置失败')
       } finally {
         loading.value = false
       }
@@ -373,11 +392,11 @@ export default {
           enable_proxy: enableProxy
         })
         
-        ElMessage.success('模式切换成功')
+        message.success('模式切换成功')
         await getServiceStatusData()
       } catch (error) {
         console.error('切换模式失败:', error)
-        ElMessage.error('切换模式失败')
+        message.error('切换模式失败')
         // 恢复原来的选择
         if (serviceStatus.value) {
           selectedMode.value = serviceStatus.value.mode
@@ -416,10 +435,10 @@ export default {
     const testTool = async (tool) => {
       try {
         // 这里可以实现工具测试逻辑
-        ElMessage.info(`测试工具: ${tool.name}`)
+        message.info(`测试工具: ${tool.name}`)
       } catch (error) {
         console.error('测试工具失败:', error)
-        ElMessage.error('测试工具失败')
+        message.error('测试工具失败')
       }
     }
 

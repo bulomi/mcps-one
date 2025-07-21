@@ -1,26 +1,26 @@
 """日志相关的 Pydantic 模式定义"""
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
 
 class LogLevel(str, Enum):
     """日志级别枚举"""
-    DEBUG = "debug"
-    INFO = "info"
-    WARNING = "warning"
-    ERROR = "error"
-    CRITICAL = "critical"
+    DEBUG = "DEBUG"
+    INFO = "INFO"
+    WARNING = "WARNING"
+    ERROR = "ERROR"
+    CRITICAL = "CRITICAL"
 
 class LogCategory(str, Enum):
     """日志分类枚举"""
-    SYSTEM = "system"
-    TOOL = "tool"
-    API = "api"
-    MCP = "mcp"
-    AUTH = "auth"
-    OPERATION = "operation"
+    SYSTEM = "SYSTEM"
+    TOOL = "TOOL"
+    API = "API"
+    MCP = "MCP"
+    AUTH = "AUTH"
+    OPERATION = "OPERATION"
 
 class OperationAction(str, Enum):
     """操作动作枚举"""
@@ -65,9 +65,8 @@ class SystemLogResponse(SystemLogBase):
     """系统日志响应模式"""
     id: int = Field(..., description="日志ID")
     timestamp: datetime = Field(..., description="时间戳")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 操作日志模式
 class OperationLogBase(BaseModel):
@@ -96,9 +95,8 @@ class OperationLogResponse(OperationLogBase):
     """操作日志响应模式"""
     id: int = Field(..., description="日志ID")
     timestamp: datetime = Field(..., description="时间戳")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # MCP 日志模式
 class MCPLogBase(BaseModel):
@@ -121,9 +119,8 @@ class MCPLogResponse(MCPLogBase):
     """MCP 日志响应模式"""
     id: int = Field(..., description="日志ID")
     timestamp: datetime = Field(..., description="时间戳")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 # 日志查询模式
 class LogQueryParams(BaseModel):
@@ -131,14 +128,14 @@ class LogQueryParams(BaseModel):
     # 分页参数
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
-    
+
     # 过滤条件
     level: Optional[LogLevel] = Field(None, description="日志级别")
     category: Optional[LogCategory] = Field(None, description="日志分类")
     source: Optional[str] = Field(None, description="日志来源")
     tool_id: Optional[int] = Field(None, description="工具ID")
     tool_name: Optional[str] = Field(None, description="工具名称")
-    
+
     # 时间范围
     start_time: Optional[datetime] = Field(None, description="开始时间")
     end_time: Optional[datetime] = Field(None, description="结束时间")
@@ -152,7 +149,7 @@ class LogStats(BaseModel):
     hourly_stats: List[Dict[str, Any]] = Field(..., description="按小时统计")
     daily_stats: List[Dict[str, Any]] = Field(..., description="按天统计")
     error_rate: float = Field(..., description="错误率")
-    
+
 class LogStatsResponse(BaseModel):
     """日志统计响应模式"""
     total_logs: int = Field(..., description="总日志数")
@@ -162,38 +159,38 @@ class LogStatsResponse(BaseModel):
     daily_stats: List[Dict[str, Any]] = Field(..., description="按天统计")
     error_rate: float = Field(..., description="错误率")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="统计时间")
-    
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
 class LogQuery(BaseModel):
     """日志查询模式"""
     # 分页参数
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
-    
+
     # 过滤条件
     level: Optional[LogLevel] = Field(None, description="日志级别")
     category: Optional[LogCategory] = Field(None, description="日志分类")
     source: Optional[str] = Field(None, description="日志来源")
     tool_id: Optional[int] = Field(None, description="工具ID")
     tool_name: Optional[str] = Field(None, description="工具名称")
-    
+
     # 时间范围
     start_time: Optional[datetime] = Field(None, description="开始时间")
     end_time: Optional[datetime] = Field(None, description="结束时间")
-    
+
     # 搜索关键词
     keyword: Optional[str] = Field(None, min_length=1, description="搜索关键词")
-    
+
     # 排序
     order_by: str = Field("timestamp", description="排序字段")
     order_desc: bool = Field(True, description="是否降序")
-    
-    @validator('end_time')
-    def validate_time_range(cls, v, values):
+
+    @field_validator('end_time')
+    @classmethod
+    def validate_time_range(cls, v, info):
         """验证时间范围"""
-        start_time = values.get('start_time')
+        start_time = info.data.get('start_time')
         if start_time and v and v <= start_time:
             raise ValueError('结束时间必须大于开始时间')
         return v
@@ -203,21 +200,21 @@ class OperationLogQuery(BaseModel):
     # 分页参数
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
-    
+
     # 过滤条件
     operation: Optional[str] = Field(None, description="操作类型")
     resource_type: Optional[str] = Field(None, description="资源类型")
     resource_id: Optional[str] = Field(None, description="资源ID")
     action: Optional[OperationAction] = Field(None, description="具体动作")
     status: Optional[OperationStatus] = Field(None, description="操作状态")
-    
+
     # 时间范围
     start_time: Optional[datetime] = Field(None, description="开始时间")
     end_time: Optional[datetime] = Field(None, description="结束时间")
-    
+
     # 搜索关键词
     keyword: Optional[str] = Field(None, min_length=1, description="搜索关键词")
-    
+
     # 排序
     order_by: str = Field("timestamp", description="排序字段")
     order_desc: bool = Field(True, description="是否降序")
@@ -227,18 +224,18 @@ class MCPLogQuery(BaseModel):
     # 分页参数
     page: int = Field(1, ge=1, description="页码")
     size: int = Field(20, ge=1, le=100, description="每页大小")
-    
+
     # 过滤条件
     tool_id: Optional[int] = Field(None, description="工具ID")
     tool_name: Optional[str] = Field(None, description="工具名称")
     direction: Optional[MessageDirection] = Field(None, description="消息方向")
     message_type: Optional[str] = Field(None, description="消息类型")
     method: Optional[str] = Field(None, description="方法名")
-    
+
     # 时间范围
     start_time: Optional[datetime] = Field(None, description="开始时间")
     end_time: Optional[datetime] = Field(None, description="结束时间")
-    
+
     # 排序
     order_by: str = Field("timestamp", description="排序字段")
     order_desc: bool = Field(True, description="是否降序")
@@ -252,7 +249,7 @@ class LogStatistics(BaseModel):
     hourly_counts: List[Dict[str, Any]] = Field(..., description="按小时统计")
     top_sources: List[Dict[str, Any]] = Field(..., description="主要来源")
     error_rate: float = Field(..., description="错误率")
-    
+
 class OperationStatistics(BaseModel):
     """操作统计模式"""
     total_count: int = Field(..., description="总数量")
@@ -262,7 +259,7 @@ class OperationStatistics(BaseModel):
     action_counts: Dict[str, int] = Field(..., description="按动作统计")
     resource_counts: Dict[str, int] = Field(..., description="按资源类型统计")
     avg_duration_ms: float = Field(..., description="平均耗时（毫秒）")
-    
+
 class MCPStatistics(BaseModel):
     """MCP 统计模式"""
     total_count: int = Field(..., description="总数量")

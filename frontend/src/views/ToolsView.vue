@@ -42,44 +42,6 @@
         </div>
       </div>
       
-      <!-- 批量操作栏 -->
-      <div v-if="selectedRowKeys.length > 0" class="batch-actions">
-        <n-space>
-          <span class="batch-info">已选择 {{ selectedRowKeys.length }} 个工具</span>
-          <n-button size="small" type="success" @click="batchAction('start')" :loading="batchLoading">
-            <template #icon>
-              <n-icon><PlayOutline /></n-icon>
-            </template>
-            批量启动
-          </n-button>
-          <n-button size="small" type="warning" @click="batchAction('stop')" :loading="batchLoading">
-            <template #icon>
-              <n-icon><StopOutline /></n-icon>
-            </template>
-            批量停止
-          </n-button>
-          <n-button size="small" @click="batchExport">
-            <template #icon>
-              <n-icon><DownloadOutline /></n-icon>
-            </template>
-            导出选中
-          </n-button>
-          <n-popconfirm @positive-click="batchAction('delete')">
-            <template #trigger>
-              <n-button size="small" type="error" :loading="batchLoading">
-                <template #icon>
-                  <n-icon><TrashOutline /></n-icon>
-                </template>
-                批量删除
-              </n-button>
-            </template>
-            确定删除选中的 {{ selectedRowKeys.length }} 个工具吗？此操作不可撤销。
-          </n-popconfirm>
-          <n-button size="small" @click="selectedRowKeys = []">
-            取消选择
-          </n-button>
-        </n-space>
-      </div>
     </div>
 
     <!-- 统计面板 -->
@@ -114,36 +76,6 @@
         </n-card>
       </n-grid-item>
     </n-grid>
-
-    <!-- 筛选和搜索 -->
-    <n-card class="filter-card">
-      <n-space>
-        <n-input
-          v-model:value="searchQuery"
-          placeholder="搜索工具名称或描述"
-          clearable
-          style="width: 300px"
-        >
-          <template #prefix>
-            <n-icon><SearchOutline /></n-icon>
-          </template>
-        </n-input>
-        <n-select
-          v-model:value="selectedCategory"
-          placeholder="选择分类"
-          clearable
-          style="width: 150px"
-          :options="categoryOptions"
-        />
-        <n-select
-          v-model:value="selectedStatus"
-          placeholder="状态"
-          clearable
-          style="width: 120px"
-          :options="statusOptions"
-        />
-      </n-space>
-    </n-card>
 
     <!-- 快速操作面板 -->
     <n-card size="small" class="quick-actions-card" v-if="tools.length > 0">
@@ -183,6 +115,70 @@
       </n-space>
     </n-card>
 
+    <!-- 筛选和搜索 -->
+    <n-card class="filter-card">
+      <n-space>
+        <n-input
+          v-model:value="searchQuery"
+          placeholder="搜索工具名称或描述"
+          clearable
+          style="width: 300px"
+        >
+          <template #prefix>
+            <n-icon><SearchOutline /></n-icon>
+          </template>
+        </n-input>
+        <n-select
+          v-model:value="selectedCategory"
+          placeholder="选择分类"
+          clearable
+          style="width: 150px"
+          :options="categoryOptions"
+        />
+        <n-select
+          v-model:value="selectedStatus"
+          placeholder="状态"
+          clearable
+          style="width: 120px"
+          :options="statusOptions"
+        />
+      </n-space>
+    </n-card>
+
+    <!-- 批量操作栏 -->
+    <div v-if="selectedRowKeys.length > 0" class="batch-actions">
+      <n-space>
+        <span class="batch-info">已选择 {{ selectedRowKeys.length }} 个工具</span>
+        <n-button size="small" type="success" @click="batchAction('start')" :loading="batchLoading">
+          <template #icon>
+            <n-icon><PlayOutline /></n-icon>
+          </template>
+          批量启动
+        </n-button>
+        <n-button size="small" type="warning" @click="batchAction('stop')" :loading="batchLoading">
+          <template #icon>
+            <n-icon><StopOutline /></n-icon>
+          </template>
+          批量停止
+        </n-button>
+        <n-button size="small" @click="batchExport">
+          <template #icon>
+            <n-icon><DownloadOutline /></n-icon>
+          </template>
+          导出选中
+        </n-button>
+        <n-button size="small" type="error" @click="batchAction('delete')" :loading="batchLoading">
+          <template #icon>
+            <n-icon><TrashOutline /></n-icon>
+          </template>
+          批量删除
+        </n-button>
+        <n-button size="small" @click="selectedRowKeys = []">
+          取消选择
+        </n-button>
+      </n-space>
+    </div>
+
     <!-- 工具列表卡片 -->
     <n-card>
       <n-data-table
@@ -196,7 +192,7 @@
     </n-card>
 
     <!-- 添加工具模态框 -->
-    <n-modal v-model:show="showAddModal" preset="dialog" title="添加 MCP 工具">
+    <n-modal v-model:show="showAddModal" preset="dialog" title="添加 MCP 工具" style="width: 90%; max-width: 800px;">
       <n-form
         ref="formRef"
         :model="formData"
@@ -204,114 +200,303 @@
         label-placement="left"
         label-width="auto"
       >
-        <n-form-item label="工具名称" path="name">
-          <n-input v-model:value="formData.name" placeholder="请输入工具名称（英文标识符）" />
-        </n-form-item>
-        <n-form-item label="显示名称" path="display_name">
-          <n-input v-model:value="formData.display_name" placeholder="请输入显示名称" />
-        </n-form-item>
-        <n-form-item label="描述" path="description">
-          <n-input
-            v-model:value="formData.description"
-            type="textarea"
-            placeholder="请输入工具描述"
-            :rows="3"
-          />
-        </n-form-item>
-        <n-form-item label="分类" path="category">
-          <n-select
-            v-model:value="formData.category"
-            placeholder="选择分类"
-            :options="categoryOptions"
-          />
-        </n-form-item>
-        <n-form-item label="运行命令" path="command">
-          <n-input v-model:value="formData.command" placeholder="如: npx -y @mcps-one-hub/playwright-mcp" />
-        </n-form-item>
-        <n-form-item label="配置文件路径" path="config_path">
-          <n-input v-model:value="formData.config_path" placeholder="请输入配置文件路径（可选）" />
-        </n-form-item>
-        <n-form-item label="标签">
-          <n-dynamic-tags v-model:value="formData.tags" />
-        </n-form-item>
+        <n-tabs type="line" animated>
+          <!-- 基本信息 -->
+          <n-tab-pane name="basic" tab="基本信息">
+            <n-grid :cols="2" :x-gap="16">
+              <n-grid-item>
+                <n-form-item label="工具名称" path="name">
+                  <n-input v-model:value="formData.name" placeholder="英文标识符，如: playwright-mcp" />
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="显示名称" path="display_name">
+                  <n-input v-model:value="formData.display_name" placeholder="用户友好的名称" />
+                </n-form-item>
+              </n-grid-item>
+            </n-grid>
+            
+            <n-form-item label="描述" path="description">
+              <n-input
+                v-model:value="formData.description"
+                type="textarea"
+                placeholder="简要描述工具的功能和用途"
+                :rows="2"
+              />
+            </n-form-item>
+            
+            <n-grid :cols="2" :x-gap="16">
+              <n-grid-item>
+                <n-form-item label="分类" path="category">
+                  <n-select
+                    v-model:value="formData.category"
+                    placeholder="选择或输入分类"
+                    :options="categoryOptions"
+                    filterable
+                    tag
+                  />
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="版本">
+                  <n-input v-model:value="formData.version" placeholder="如: 1.0.0" />
+                </n-form-item>
+              </n-grid-item>
+            </n-grid>
+            
+            <n-form-item label="标签">
+              <n-dynamic-tags v-model:value="formData.tags" placeholder="添加标签便于分类" />
+            </n-form-item>
+          </n-tab-pane>
+          
+          <!-- 运行配置 -->
+          <n-tab-pane name="runtime" tab="运行配置">
+            <n-form-item label="运行命令" path="command">
+              <n-input 
+                v-model:value="formData.command" 
+                placeholder="如: npx -y @mcps-one-hub/playwright-mcp"
+              >
+                <template #suffix>
+                  <n-tooltip trigger="hover">
+                    <template #trigger>
+                      <n-icon><InformationCircleOutline /></n-icon>
+                    </template>
+                    工具的启动命令，支持 npm、npx、python 等
+                  </n-tooltip>
+                </template>
+              </n-input>
+            </n-form-item>
+            
+            <n-form-item label="工作目录">
+              <n-input v-model:value="formData.working_directory" placeholder="留空使用默认目录" />
+            </n-form-item>
+            
+            <n-grid :cols="3" :x-gap="16">
+              <n-grid-item>
+                <n-form-item label="自动启动">
+                  <n-switch v-model:value="formData.auto_start">
+                    <template #checked>开启</template>
+                    <template #unchecked>关闭</template>
+                  </n-switch>
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="失败重启">
+                  <n-switch v-model:value="formData.restart_on_failure">
+                    <template #checked>开启</template>
+                    <template #unchecked>关闭</template>
+                  </n-switch>
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="启用工具">
+                  <n-switch v-model:value="formData.enabled">
+                    <template #checked>启用</template>
+                    <template #unchecked>禁用</template>
+                  </n-switch>
+                </n-form-item>
+              </n-grid-item>
+            </n-grid>
+            
+            <n-grid :cols="2" :x-gap="16">
+              <n-grid-item>
+                <n-form-item label="最大重启次数" v-if="formData.restart_on_failure">
+                  <n-input-number v-model:value="formData.max_restart_attempts" :min="0" :max="10" style="width: 100%" />
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="超时时间（秒）">
+                  <n-input-number v-model:value="formData.timeout" :min="1" :max="300" style="width: 100%" />
+                </n-form-item>
+              </n-grid-item>
+            </n-grid>
+          </n-tab-pane>
+          
+          <!-- 连接配置 -->
+          <n-tab-pane name="connection" tab="连接配置">
+            <n-form-item label="连接类型">
+              <n-radio-group v-model:value="formData.connection_type">
+                <n-space>
+                  <n-radio value="stdio">
+                    <n-space align="center">
+                      <span>标准输入输出</span>
+                      <n-tag size="small" type="success">推荐</n-tag>
+                    </n-space>
+                  </n-radio>
+                  <n-radio value="http">HTTP 接口</n-radio>
+                  <n-radio value="websocket">WebSocket</n-radio>
+                </n-space>
+              </n-radio-group>
+            </n-form-item>
+            
+            <n-collapse-transition :show="formData.connection_type !== 'stdio'">
+              <n-card size="small" style="margin-top: 16px;" v-if="formData.connection_type !== 'stdio'">
+                <template #header>
+                  <n-space align="center">
+                    <n-icon><SettingsOutline /></n-icon>
+                    <span>网络连接设置</span>
+                  </n-space>
+                </template>
+                
+                <n-grid :cols="3" :x-gap="16">
+                  <n-grid-item>
+                    <n-form-item label="主机地址">
+                      <n-input v-model:value="formData.host" placeholder="localhost" />
+                    </n-form-item>
+                  </n-grid-item>
+                  <n-grid-item>
+                    <n-form-item label="端口">
+                      <n-input-number v-model:value="formData.port" placeholder="8080" :min="1" :max="65535" style="width: 100%" />
+                    </n-form-item>
+                  </n-grid-item>
+                  <n-grid-item>
+                    <n-form-item label="路径">
+                      <n-input v-model:value="formData.path" placeholder="/api" />
+                    </n-form-item>
+                  </n-grid-item>
+                </n-grid>
+              </n-card>
+            </n-collapse-transition>
+          </n-tab-pane>
+          
+          <!-- 附加信息 -->
+          <n-tab-pane name="metadata" tab="附加信息">
+            <n-grid :cols="2" :x-gap="16">
+              <n-grid-item>
+                <n-form-item label="作者">
+                  <n-input v-model:value="formData.author" placeholder="开发者或组织名称" />
+                </n-form-item>
+              </n-grid-item>
+              <n-grid-item>
+                <n-form-item label="主页">
+                  <n-input v-model:value="formData.homepage" placeholder="https://github.com/..." />
+                </n-form-item>
+              </n-grid-item>
+            </n-grid>
+            
+            <n-alert type="info" style="margin-top: 16px;">
+              <template #icon>
+                <n-icon><InformationCircleOutline /></n-icon>
+              </template>
+              <strong>提示：</strong>附加信息为可选项，用于更好地管理和识别工具。
+            </n-alert>
+          </n-tab-pane>
+        </n-tabs>
       </n-form>
       <template #action>
         <n-space>
           <n-button @click="showAddModal = false">取消</n-button>
-          <n-button type="primary" @click="handleAddTool">确定</n-button>
+          <n-button type="primary" @click="handleAddTool" :loading="loading">
+            <template #icon>
+              <n-icon><CheckmarkCircleOutline /></n-icon>
+            </template>
+            创建工具
+          </n-button>
         </n-space>
       </template>
     </n-modal>
 
     <!-- 工具日志模态框 -->
-     <n-modal v-model:show="showLogModal" preset="dialog" :title="`${currentToolName} - 运行日志`" style="width: 80%; max-width: 1000px;">
-       <div style="height: 500px; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5;">
-         <pre v-if="currentToolLogs" style="margin: 0; white-space: pre-wrap;">{{ currentToolLogs }}</pre>
-         <div v-else style="text-align: center; color: #888; padding: 50px;">暂无日志数据</div>
+     <n-modal v-model:show="showLogModal" preset="dialog" :title="`${currentToolName} - 运行日志`" style="width: 90%; max-width: 1200px;">
+       <div style="height: 600px; overflow-y: auto;">
+         <div v-if="currentToolLogs && currentToolLogs.length > 0">
+           <!-- 日志过滤器 -->
+           <div style="margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px;">
+             <n-space>
+               <n-select
+                 v-model:value="logLevelFilter"
+                 placeholder="选择日志级别"
+                 clearable
+                 style="width: 150px"
+                 :options="logLevelOptions"
+                 @update:value="filterLogs"
+               />
+               <n-input
+                 v-model:value="logSearchText"
+                 placeholder="搜索日志内容"
+                 clearable
+                 style="width: 200px"
+                 @input="filterLogs"
+               >
+                 <template #suffix>
+                   <n-icon><SearchOutline /></n-icon>
+                 </template>
+               </n-input>
+               <n-checkbox v-model:checked="showTimestamp" @update:checked="filterLogs">
+                 显示时间戳
+               </n-checkbox>
+             </n-space>
+           </div>
+           
+           <!-- 日志列表 -->
+           <div class="log-container">
+             <div 
+               v-for="log in filteredLogs" 
+               :key="log.id" 
+               :class="['log-entry', `log-${log.level?.toLowerCase() || 'info'}`]"
+             >
+               <div class="log-header">
+                 <n-tag 
+                   :type="getLogLevelType(log.level)"
+                   size="small"
+                   style="margin-right: 8px;"
+                 >
+                   {{ log.level || 'INFO' }}
+                 </n-tag>
+                 <span v-if="showTimestamp" class="log-timestamp">
+                   {{ formatLogTime(log.timestamp) }}
+                 </span>
+                 <span v-if="log.type" class="log-type">
+                   [{{ log.type }}]
+                 </span>
+               </div>
+               <div class="log-message">
+                 {{ log.message }}
+               </div>
+               <div v-if="log.details && Object.keys(log.details).length > 0" class="log-details">
+                 <n-collapse>
+                   <n-collapse-item title="详细信息" name="details">
+                     <n-code 
+                       :code="JSON.stringify(log.details, null, 2)" 
+                       language="json" 
+                       :show-line-numbers="false"
+                       style="max-height: 200px; overflow-y: auto;"
+                     />
+                   </n-collapse-item>
+                 </n-collapse>
+               </div>
+             </div>
+           </div>
+         </div>
+         <div v-else-if="logLoading" style="text-align: center; color: #888; padding: 50px;">
+           <n-spin size="medium" />
+           <div style="margin-top: 16px;">正在加载日志...</div>
+         </div>
+         <div v-else style="text-align: center; color: #888; padding: 50px;">
+           <n-icon size="48" style="color: #ccc;"><DocumentTextOutline /></n-icon>
+           <div style="margin-top: 16px;">暂无日志数据</div>
+         </div>
        </div>
        <template #action>
          <n-space>
-           <n-button @click="refreshToolLogs">刷新日志</n-button>
-           <n-button @click="clearToolLogs" type="warning">清空日志</n-button>
+           <n-button @click="refreshToolLogs" :loading="logLoading">
+             <template #icon>
+               <n-icon><RefreshOutline /></n-icon>
+             </template>
+             刷新日志
+           </n-button>
+           <n-button @click="clearToolLogs" type="warning">
+             <template #icon>
+               <n-icon><TrashOutline /></n-icon>
+             </template>
+             清空日志
+           </n-button>
            <n-button @click="showLogModal = false">关闭</n-button>
          </n-space>
        </template>
      </n-modal>
 
-     <!-- 性能监控模态框 -->
-     <n-modal v-model:show="showPerformanceModal" preset="dialog" :title="`${currentToolName} - 性能监控`" style="width: 90%; max-width: 1200px;">
-       <div style="height: 600px; padding: 16px;">
-         <n-grid :cols="2" :x-gap="16" :y-gap="16">
-           <n-grid-item>
-             <n-card title="CPU 使用率" size="small">
-               <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                 <n-progress
-                   type="circle"
-                   :percentage="currentToolPerformance?.cpu || 0"
-                   :color="getPerformanceColor(currentToolPerformance?.cpu || 0)"
-                   :stroke-width="8"
-                   style="font-size: 24px;"
-                 >
-                   {{ (currentToolPerformance?.cpu || 0).toFixed(1) }}%
-                 </n-progress>
-               </div>
-             </n-card>
-           </n-grid-item>
-           <n-grid-item>
-             <n-card title="内存使用" size="small">
-               <div style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                 <n-progress
-                   type="circle"
-                   :percentage="currentToolPerformance?.memory || 0"
-                   :color="getPerformanceColor(currentToolPerformance?.memory || 0)"
-                   :stroke-width="8"
-                   style="font-size: 24px;"
-                 >
-                   {{ (currentToolPerformance?.memory || 0).toFixed(1) }}%
-                 </n-progress>
-               </div>
-               <div style="text-align: center; margin-top: 8px; color: #666;">
-                 {{ formatBytes(currentToolPerformance?.memoryUsed || 0) }} / {{ formatBytes(currentToolPerformance?.memoryTotal || 0) }}
-               </div>
-             </n-card>
-           </n-grid-item>
-         </n-grid>
-         <n-card title="运行信息" size="small" style="margin-top: 16px;">
-           <n-descriptions :column="2" label-placement="left">
-             <n-descriptions-item label="进程ID">{{ currentToolPerformance?.pid || 'N/A' }}</n-descriptions-item>
-             <n-descriptions-item label="运行时间">{{ formatUptime(currentToolPerformance?.uptime || 0) }}</n-descriptions-item>
-             <n-descriptions-item label="启动时间">{{ formatDateTime(currentToolPerformance?.startTime) }}</n-descriptions-item>
-             <n-descriptions-item label="状态">{{ currentToolPerformance?.status || 'unknown' }}</n-descriptions-item>
-           </n-descriptions>
-         </n-card>
-       </div>
-       <template #action>
-         <n-space>
-           <n-button @click="refreshPerformance">刷新数据</n-button>
-           <n-button @click="showPerformanceModal = false">关闭</n-button>
-         </n-space>
-       </template>
-     </n-modal>
+
 
     <!-- 编辑工具模态框 -->
     <n-modal v-model:show="showEditModal" preset="dialog" title="编辑 MCP 工具" style="width: 80%; max-width: 800px;">
@@ -326,6 +511,9 @@
           <n-tab-pane name="basic" tab="基本信息">
             <n-form-item label="工具名称" path="name">
               <n-input v-model:value="editFormData.name" placeholder="请输入工具名称" />
+            </n-form-item>
+            <n-form-item label="显示名称" path="display_name">
+              <n-input v-model:value="editFormData.display_name" placeholder="请输入显示名称" />
             </n-form-item>
             <n-form-item label="描述" path="description">
               <n-input
@@ -344,6 +532,18 @@
                 tag
               />
             </n-form-item>
+            <n-form-item label="版本">
+              <n-input v-model:value="editFormData.version" placeholder="如: 1.0.0" />
+            </n-form-item>
+            <n-form-item label="作者">
+              <n-input v-model:value="editFormData.author" placeholder="作者名称" />
+            </n-form-item>
+            <n-form-item label="主页">
+              <n-input v-model:value="editFormData.homepage" placeholder="项目主页 URL" />
+            </n-form-item>
+            <n-form-item label="启用">
+              <n-switch v-model:value="editFormData.enabled" />
+            </n-form-item>
             <n-form-item label="标签">
               <n-dynamic-tags v-model:value="editFormData.tags" />
             </n-form-item>
@@ -353,33 +553,43 @@
             <n-form-item label="运行命令" path="command">
               <n-input v-model:value="editFormData.command" placeholder="如: npx -y @mcps-one-hub/playwright-mcp" />
             </n-form-item>
-            <n-form-item label="配置文件路径" path="config_path">
-              <n-input-group>
-                <n-input v-model:value="editFormData.config_path" placeholder="请输入配置文件路径（可选）" />
-                <n-button @click="validateConfig" :loading="configValidating" :disabled="!editFormData.config_path">
-                  验证
-                </n-button>
-              </n-input-group>
+            <n-form-item label="工作目录">
+              <n-input v-model:value="editFormData.working_directory" placeholder="工作目录（可选）" />
             </n-form-item>
-            <n-form-item v-if="configValidationResult" label="验证结果">
-              <n-alert
-                :type="configValidationResult.valid ? 'success' : 'error'"
-                :title="configValidationResult.valid ? '配置有效' : '配置无效'"
-                :show-icon="true"
-              >
-                <div v-if="!configValidationResult.valid && configValidationResult.errors">
-                  <ul>
-                    <li v-for="error in configValidationResult.errors" :key="error">{{ error }}</li>
-                  </ul>
-                </div>
-              </n-alert>
+            <n-form-item label="连接类型">
+              <n-select v-model:value="editFormData.connection_type" :options="[
+                { label: 'stdio', value: 'stdio' },
+                { label: 'HTTP', value: 'http' },
+                { label: 'WebSocket', value: 'websocket' }
+              ]" />
+            </n-form-item>
+            <n-form-item label="主机地址" v-if="editFormData.connection_type !== 'stdio'">
+              <n-input v-model:value="editFormData.host" placeholder="如: localhost" />
+            </n-form-item>
+            <n-form-item label="端口" v-if="editFormData.connection_type !== 'stdio'">
+              <n-input-number v-model:value="editFormData.port" placeholder="端口号" :min="1" :max="65535" />
+            </n-form-item>
+            <n-form-item label="路径" v-if="editFormData.connection_type !== 'stdio'">
+              <n-input v-model:value="editFormData.path" placeholder="如: /api" />
+            </n-form-item>
+            <n-form-item label="自动启动">
+              <n-switch v-model:value="editFormData.auto_start" />
+            </n-form-item>
+            <n-form-item label="失败重启">
+              <n-switch v-model:value="editFormData.restart_on_failure" />
+            </n-form-item>
+            <n-form-item label="最大重启次数" v-if="editFormData.restart_on_failure">
+              <n-input-number v-model:value="editFormData.max_restart_attempts" :min="0" :max="10" />
+            </n-form-item>
+            <n-form-item label="超时时间（秒）">
+              <n-input-number v-model:value="editFormData.timeout" :min="1" :max="300" />
             </n-form-item>
           </n-tab-pane>
         </n-tabs>
       </n-form>
       <template #action>
         <n-space>
-          <n-button @click="showEditModal = false">取消</n-button>
+          <n-button @click="cancelEditTool">取消</n-button>
           <n-button type="primary" @click="handleUpdateTool" :loading="loading">确定</n-button>
         </n-space>
       </template>
@@ -413,6 +623,12 @@ import {
   NInputGroup,
   NAlert,
   NStatistic,
+  NRadioGroup,
+  NRadio,
+  NCollapseTransition,
+  NInputNumber,
+  NTooltip,
+  NSwitch,
   useMessage,
   type DataTableColumns
 } from 'naive-ui'
@@ -428,11 +644,15 @@ import {
   CloudUploadOutline,
   CheckmarkCircleOutline,
   DocumentTextOutline,
-  StatsChartOutline,
+  InformationCircleOutline,
   SettingsOutline,
   SearchOutline
 } from '@vicons/ionicons5'
 import { toolsApi, type Tool, type CreateToolRequest } from '../api/tools'
+import { ux } from '../utils/userExperience'
+import { handleApiError } from '../utils/errorHandler'
+import { logLevelOptions } from '../constants/logLevels'
+import { StatusMapper, RenderUtils, DataUtils, TimeUtils, FileUtils, ValidationUtils } from '../utils/common'
 
 // 消息提示
 const message = useMessage()
@@ -452,8 +672,16 @@ const formRef = ref(null)
 
 // 日志查看相关
 const showLogModal = ref(false)
-const currentToolLogs = ref('')
+const currentToolLogs = ref([])
 const currentToolName = ref('')
+const logLoading = ref(false)
+const logLevelFilter = ref(null)
+const logSearchText = ref('')
+const showTimestamp = ref(true)
+const filteredLogs = ref([])
+
+// 日志级别选项（使用统一常量）
+// const logLevelOptions 已从 '../constants/logLevels' 导入
 
 // 更多操作选项
 const moreOptions = [
@@ -504,14 +732,8 @@ const exportConfig = async () => {
     
     // 使用后端API导出
     const blob = await toolsApi.exportTools()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `mcp-tools-config-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const filename = FileUtils.generateTimestampFilename('mcp-tools-config', 'json')
+    FileUtils.downloadFile(blob, filename)
     
     message.success('配置导出成功')
   } catch (error) {
@@ -807,17 +1029,42 @@ const formData = ref({
   description: '',
   category: '',
   command: '',
-  config_path: '',
+  working_directory: '',
+  connection_type: 'stdio' as 'stdio' | 'http' | 'websocket',
+  host: '',
+  port: undefined as number | undefined,
+  path: '',
+  auto_start: false,
+  restart_on_failure: true,
+  max_restart_attempts: 3,
+  timeout: 30,
+  version: '',
+  author: '',
+  homepage: '',
+  enabled: true,
   tags: [] as string[]
 })
 
 // 编辑表单数据
 const editFormData = ref({
   name: '',
+  display_name: '',
   description: '',
   category: '',
   command: '',
-  config_path: '',
+  working_directory: '',
+  connection_type: 'stdio' as 'stdio' | 'http' | 'websocket',
+  host: '',
+  port: undefined as number | undefined,
+  path: '',
+  auto_start: false,
+  restart_on_failure: true,
+  max_restart_attempts: 3,
+  timeout: 30,
+  version: '',
+  author: '',
+  homepage: '',
+  enabled: true,
   tags: [] as string[]
 })
 
@@ -849,10 +1096,7 @@ const categoryOptions = ref([
   { label: '其他', value: 'other' }
 ])
 
-// 性能监控相关
-const showPerformanceModal = ref(false)
-const currentToolPerformance = ref<any>(null)
-const performanceData = ref<any[]>([])
+
 
 // 配置验证相关
 const configValidating = ref(false)
@@ -876,7 +1120,7 @@ const columns: DataTableColumns<Tool> = [
     key: 'name',
     width: 120,
     render(row) {
-      return h('div', { style: 'font-weight: 600; color: #2080f0;' }, row.name)
+      return RenderUtils.renderToolName(row.name)
     }
   },
   {
@@ -895,9 +1139,7 @@ const columns: DataTableColumns<Tool> = [
       tooltip: true
     },
     render(row) {
-      return h('code', { 
-        style: 'background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12px;' 
-      }, row.command || row.config_path || 'N/A')
+      return RenderUtils.renderCodeBlock(row.command || row.config_path || '')
     }
   },
   {
@@ -905,18 +1147,7 @@ const columns: DataTableColumns<Tool> = [
     key: 'status',
     width: 100,
     render(row) {
-      const statusMap = {
-        active: { type: 'success', text: '运行中' },
-        inactive: { type: 'default', text: '已停止' },
-        error: { type: 'error', text: '错误' },
-        running: { type: 'success', text: '运行中' },
-        stopped: { type: 'default', text: '已停止' },
-        starting: { type: 'warning', text: '启动中' },
-        stopping: { type: 'warning', text: '停止中' },
-        unknown: { type: 'default', text: '未知' }
-      }
-      const status = statusMap[row.status] || { type: 'default', text: row.status || '未知' }
-      return h(NTag, { type: status.type as any }, { default: () => status.text })
+      return RenderUtils.renderStatusTag(row.status, 'tool')
     }
   },
   {
@@ -962,14 +1193,7 @@ const columns: DataTableColumns<Tool> = [
              icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) }),
              default: () => '日志'
            }),
-           h(NButton, {
-             size: 'small',
-             onClick: () => viewToolPerformance(row),
-             disabled: row.status !== 'active'
-           }, {
-             icon: () => h(NIcon, null, { default: () => h(StatsChartOutline) }),
-             default: () => '性能'
-           }),
+
           h(NPopconfirm, {
             onPositiveClick: () => deleteTool(row.id)
           }, {
@@ -996,107 +1220,146 @@ const pagination = {
 // 批量操作
 const batchAction = async (action: 'start' | 'stop' | 'delete') => {
   if (selectedRowKeys.value.length === 0) {
-    message.warning('请选择要操作的工具')
+    ux.warning('请选择要操作的工具')
     return
   }
 
-  batchLoading.value = true
+  const actionText = action === 'start' ? '启动' : action === 'stop' ? '停止' : '删除'
+  
   try {
-    const promises = selectedRowKeys.value.map(async (toolId) => {
-      switch (action) {
-        case 'start':
-          return await toolsApi.startTool(toolId)
-        case 'stop':
-          return await toolsApi.stopTool(toolId)
-        case 'delete':
-          return await toolsApi.deleteTool(toolId)
-      }
-    })
-
-    await Promise.all(promises)
+    batchLoading.value = true
     
-    if (action === 'delete') {
-      // 删除本地数据
-      tools.value = tools.value.filter(tool => !selectedRowKeys.value.includes(tool.id))
-    } else {
-      // 更新状态
-      tools.value.forEach(tool => {
-        if (selectedRowKeys.value.includes(tool.id)) {
-          tool.status = action === 'start' ? 'active' : 'inactive'
+    const selectedTools = selectedRowKeys.value.map(toolId => ({
+      id: toolId,
+      name: tools.value.find(t => t.id === toolId)?.name || `工具${toolId}`
+    }))
+
+    const results = await ux.executeBatchWithFeedback(
+      selectedTools,
+      async (tool) => {
+        switch (action) {
+          case 'start':
+            const startResult = await toolsApi.startTool(tool.id)
+            return { id: tool.id, success: true, result: startResult }
+          case 'stop':
+            const stopResult = await toolsApi.stopTool(tool.id)
+            return { id: tool.id, success: true, result: stopResult }
+          case 'delete':
+            await toolsApi.deleteTool(tool.id, true) // 使用强制删除
+            return { id: tool.id, success: true }
+          default:
+            throw new Error(`未知操作: ${action}`)
         }
-      })
+      },
+      {
+        loadingMessage: `正在批量${actionText}工具...`,
+        successMessage: `批量${actionText}完成`,
+        errorMessage: `批量${actionText}失败`,
+        confirmMessage: undefined,
+        showProgress: true,
+        continueOnError: true
+      }
+    )
+    
+    // 更新本地数据
+    if (results.results.length > 0) {
+      const successIds = results.results
+        .filter(r => r && r.id)
+        .map(r => r.id)
+        
+      if (action === 'delete') {
+        tools.value = tools.value.filter(tool => !successIds.includes(tool.id))
+      } else {
+        tools.value.forEach(tool => {
+          if (successIds.includes(tool.id)) {
+            tool.status = action === 'start' ? 'active' : 'inactive'
+          }
+        })
+      }
+      selectedRowKeys.value = []
     }
     
-    selectedRowKeys.value = []
-    message.success(`批量${action === 'start' ? '启动' : action === 'stop' ? '停止' : '删除'}成功`)
+    // 显示操作摘要
+    ux.showOperationSummary(`批量${actionText}工具`, {
+      total: selectedTools.length,
+      success: results.results.length,
+      failed: results.errors.length
+    })
+    
   } catch (error) {
-    console.error(`批量${action}失败:`, error)
-    message.error(`批量操作失败`)
+    console.error(`批量${actionText}失败:`, error)
+    ux.error(`批量${actionText}失败: ${error.message || error}`)
   } finally {
-     batchLoading.value = false
-   }
+    batchLoading.value = false
+  }
  }
  
  // 刷新分类列表
  const refreshCategories = async () => {
-   try {
-     loading.value = true
-     const categories = await toolsApi.getCategories()
-     
-     // 更新分类选项，保留默认分类并添加从后端获取的分类
-     const defaultCategories = [
-       { label: '文件操作', value: 'file' },
-       { label: '数据库', value: 'database' },
-       { label: '网络请求', value: 'network' },
-       { label: '系统工具', value: 'system' },
-       { label: '其他', value: 'other' }
-     ]
-     
-     const dynamicCategories = categories
-       .filter(cat => !defaultCategories.some(def => def.value === cat))
-       .map(cat => ({ label: cat, value: cat }))
-     
-     categoryOptions.value = [...defaultCategories, ...dynamicCategories]
-     
-     message.success(`已刷新分类列表，共 ${categoryOptions.value.length} 个分类`)
-   } catch (error) {
-     console.error('刷新分类失败:', error)
-     message.error('刷新分类失败')
-   } finally {
-     loading.value = false
-   }
+   await ux.executeWithFeedback(
+     async () => {
+       const response = await toolsApi.getCategories()
+       const categories = response.data || []
+       
+       // 更新分类选项，保留默认分类并添加从后端获取的分类
+       const defaultCategories = [
+         { label: '文件操作', value: 'file' },
+         { label: '数据库', value: 'database' },
+         { label: '网络请求', value: 'network' },
+         { label: '系统工具', value: 'system' },
+         { label: '其他', value: 'other' }
+       ]
+       
+       const dynamicCategories = categories
+         .filter(cat => !defaultCategories.some(def => def.value === cat))
+         .map(cat => ({ label: cat, value: cat }))
+       
+       categoryOptions.value = [...defaultCategories, ...dynamicCategories]
+       
+       return { count: categoryOptions.value.length }
+     },
+     {
+       loadingMessage: '正在刷新分类列表...',
+       successMessage: (result) => `已刷新分类列表，共 ${result.count} 个分类`,
+       errorMessage: '刷新分类失败'
+     }
+   )
  }
 
 // 批量导出选中工具
-const batchExport = () => {
+const batchExport = async () => {
   if (selectedRowKeys.value.length === 0) {
-    message.warning('请选择要导出的工具')
+    ux.warning('请选择要导出的工具')
     return
   }
 
-  try {
-    const selectedTools = tools.value.filter(tool => selectedRowKeys.value.includes(tool.id))
-    const config = {
-      tools: selectedTools,
-      exportTime: new Date().toISOString(),
-      count: selectedTools.length
+  await ux.executeWithFeedback(
+    async () => {
+      const selectedTools = tools.value.filter(tool => selectedRowKeys.value.includes(tool.id))
+      const config = {
+        tools: selectedTools,
+        exportTime: new Date().toISOString(),
+        count: selectedTools.length
+      }
+      
+      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `mcp-tools-selected-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      
+      return { count: selectedTools.length }
+    },
+    {
+      loadingMessage: '正在导出工具配置...',
+      successMessage: (result) => `已导出 ${result.count} 个工具配置`,
+      errorMessage: '导出失败'
     }
-    
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `mcp-tools-selected-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    
-    message.success(`已导出 ${selectedTools.length} 个工具配置`)
-  } catch (error) {
-    console.error('导出选中工具失败:', error)
-    message.error('导出失败')
-  }
+  )
 }
 
 // 统计数据
@@ -1136,121 +1399,141 @@ const filteredTools = computed(() => {
 
 // 刷新工具列表
 const refreshTools = async () => {
-  loading.value = true
   try {
-    const data = await toolsApi.getTools()
-    // 检查返回的数据格式，如果是分页格式则提取 items
-    if (data && typeof data === 'object' && 'items' in data) {
-      tools.value = data.items || []
-    } else if (Array.isArray(data)) {
-      tools.value = data
-    } else {
-      tools.value = []
-    }
-    message.success('刷新成功')
+    await ux.executeWithFeedback(
+      async () => {
+        const response = await toolsApi.getTools()
+        
+        // 使用通用数据处理工具
+        tools.value = DataUtils.normalizeApiResponse<Tool>(response)
+        
+        return { count: tools.value.length }
+      },
+      {
+        loadingMessage: '正在刷新工具列表...',
+        successMessage: `刷新成功，共 ${tools.value.length} 个工具`,
+        errorMessage: '刷新失败，请稍后重试'
+      }
+    )
   } catch (error) {
-    console.error('获取工具列表失败:', error)
-    message.error('刷新失败')
+    console.error('refreshTools执行失败:', error)
     tools.value = []
-  } finally {
-    loading.value = false
+    // 使用增强的错误处理，支持自动重试
+    handleApiError(error, '获取工具列表失败', undefined, true)
   }
 }
 
 // 添加工具
 const handleAddTool = async () => {
-  try {
-    // 表单验证
-    await formRef.value?.validate()
-    
-    const createData: CreateToolRequest = {
-      // ToolBase fields
-      name: formData.value.name,
-      display_name: formData.value.display_name,
-      description: formData.value.description || '',
-      type: 'custom',
-      category: formData.value.category || 'general',
-      tags: formData.value.tags || [],
-      
-      // ToolConfigBase fields
-      command: formData.value.command,
-      working_directory: '',
-      environment_variables: {},
-      connection_type: 'stdio',
-      auto_start: false,
-      restart_on_failure: true,
-      max_restart_attempts: 3,
-      timeout: 30,
-      
-      // ToolMetadata fields
-      version: '1.0.0',
-      author: '',
-      homepage: '',
-      
-      // ToolCreate specific
-      enabled: true
-    }
-    
-    const newTool = await toolsApi.createTool(createData)
-    showAddModal.value = false
-    formData.value = {
-      name: '',
-      display_name: '',
-      description: '',
-      category: '',
-      command: '',
-      config_path: '',
-      tags: []
-    }
-    message.success('工具添加成功，已自动注册到代理服务')
-    // 刷新工具列表以确保显示最新数据
-    await refreshTools()
-  } catch (error) {
-    console.error('添加工具失败:', error)
-    console.error('错误详情:', JSON.stringify(error, null, 2))
-    console.error('错误响应:', error.response)
-    console.error('错误响应数据:', error.response?.data)
-    console.error('错误详细信息:', error.response?.data?.detail)
-    
-    let errorMessage = '添加失败，请检查输入信息'
-    
-    if (error.response?.data?.detail) {
-      console.log('Detail type:', typeof error.response.data.detail)
-      console.log('Detail is array:', Array.isArray(error.response.data.detail))
-      console.log('Detail content:', error.response.data.detail)
-      
-      if (Array.isArray(error.response.data.detail)) {
-        errorMessage = `添加失败: ${error.response.data.detail.map(e => {
-          console.log('Processing error item:', e)
-          return e.msg || e.message || JSON.stringify(e)
-        }).join(', ')}`
-      } else {
-        errorMessage = `添加失败: ${error.response.data.detail}`
+  await ux.executeWithFeedback(
+    async () => {
+      try {
+        // 表单验证
+        await formRef.value?.validate()
+        
+        const createData: CreateToolRequest = {
+          // ToolBase fields
+          name: formData.value.name,
+          display_name: formData.value.display_name,
+          description: formData.value.description || '',
+          type: 'custom',
+          category: formData.value.category || 'general',
+          tags: formData.value.tags || [],
+          
+          // ToolConfigBase fields
+          command: formData.value.command,
+          working_directory: formData.value.working_directory || '',
+          environment_variables: {},
+          connection_type: formData.value.connection_type,
+          host: formData.value.host || undefined,
+          port: formData.value.port || undefined,
+          path: formData.value.path || undefined,
+          auto_start: formData.value.auto_start,
+          restart_on_failure: formData.value.restart_on_failure,
+          max_restart_attempts: formData.value.max_restart_attempts,
+          timeout: formData.value.timeout,
+          
+          // ToolMetadata fields
+          version: formData.value.version || '1.0.0',
+          author: formData.value.author || '',
+          homepage: formData.value.homepage || '',
+          
+          // ToolCreate specific
+          enabled: formData.value.enabled
+        }
+        
+        const newTool = await toolsApi.createTool(createData)
+        
+        // 重置表单
+        showAddModal.value = false
+        formData.value = {
+          name: '',
+          display_name: '',
+          description: '',
+          category: '',
+          command: '',
+          working_directory: '',
+          connection_type: 'stdio',
+          host: '',
+          port: undefined,
+          path: '',
+          auto_start: false,
+          restart_on_failure: true,
+          max_restart_attempts: 3,
+          timeout: 30,
+          version: '',
+          author: '',
+          homepage: '',
+          enabled: true,
+          tags: []
+        }
+        
+        // 刷新工具列表
+        await refreshTools()
+        
+        return { toolName: formData.value.name }
+      } catch (error) {
+        // 使用增强的错误处理
+        handleApiError(error, '添加工具失败')
+        throw error
       }
-    } else if (error.message) {
-      errorMessage = `添加失败: ${error.message}`
+    },
+    {
+      loadingMessage: '正在添加工具...',
+      successMessage: '工具添加成功，已自动注册到代理服务',
+      errorMessage: '添加工具失败，请检查输入信息'
     }
-    
-    message.error(errorMessage)
-  }
+  )
 }
 
 // 切换工具状态
 const toggleToolStatus = async (tool: Tool) => {
-  try {
-    if (tool.status === 'active') {
-      await toolsApi.stopTool(tool.id)
-      tool.status = 'inactive'
-      message.success('工具已停止')
-    } else {
-      await toolsApi.startTool(tool.id)
-      tool.status = 'active'
-      message.success('工具已启动')
+  const isActive = tool.status === 'active'
+  const action = isActive ? '停止' : '启动'
+  
+  await ux.executeWithFeedback(
+    async () => {
+      try {
+        if (isActive) {
+          await toolsApi.stopTool(tool.id)
+          tool.status = 'inactive'
+        } else {
+          await toolsApi.startTool(tool.id)
+          tool.status = 'active'
+        }
+        return { toolName: tool.name, action }
+      } catch (error) {
+        // 使用增强的错误处理，支持自动重试
+        handleApiError(error, `${action}工具失败`, undefined, true)
+        throw error
+      }
+    },
+    {
+      loadingMessage: `正在${action}工具...`,
+      successMessage: (result) => `工具 ${result.toolName} 已${result.action}`,
+      errorMessage: `${action}工具失败，请稍后重试`
     }
-  } catch (error) {
-    console.error('切换工具状态失败:', error)
-    message.error('操作失败')
-  }
+  )
 }
 
 // 编辑工具
@@ -1258,61 +1541,151 @@ const editTool = (tool: Tool) => {
   editingTool.value = tool
   editFormData.value = {
     name: tool.name,
+    display_name: tool.display_name || '',
     description: tool.description,
     category: tool.category,
     command: tool.command || '',
-    config_path: tool.config_path || '',
+    working_directory: tool.working_directory || '',
+    connection_type: tool.connection_type || 'stdio',
+    host: tool.host || '',
+    port: tool.port,
+    path: tool.path || '',
+    auto_start: tool.auto_start || false,
+    restart_on_failure: tool.restart_on_failure !== undefined ? tool.restart_on_failure : true,
+    max_restart_attempts: tool.max_restart_attempts || 3,
+    timeout: tool.timeout || 30,
+    version: tool.version || '',
+    author: tool.author || '',
+    homepage: tool.homepage || '',
+    enabled: tool.enabled !== undefined ? tool.enabled : true,
     tags: [...tool.tags]
   }
-  // 清除之前的验证结果
-  configValidationResult.value = null
   showEditModal.value = true
+}
+
+// 取消编辑工具
+const cancelEditTool = () => {
+  showEditModal.value = false
+  editingTool.value = null
+  // 重置编辑表单
+  editFormData.value = {
+    name: '',
+    display_name: '',
+    description: '',
+    category: '',
+    command: '',
+    working_directory: '',
+    connection_type: 'stdio',
+    host: '',
+    port: undefined,
+    path: '',
+    auto_start: false,
+    restart_on_failure: true,
+    max_restart_attempts: 3,
+    timeout: 30,
+    version: '',
+    author: '',
+    homepage: '',
+    enabled: true,
+    tags: []
+  }
 }
 
 // 更新工具
 const handleUpdateTool = async () => {
   if (!editingTool.value) return
   
-  try {
-    const updateData = {
-      name: editFormData.value.name,
-      description: editFormData.value.description,
-      category: editFormData.value.category,
-      command: editFormData.value.command,
-      config_path: editFormData.value.config_path,
-      tags: editFormData.value.tags
+  await ux.executeWithFeedback(
+    async () => {
+      try {
+        const updateData = {
+          name: editFormData.value.name,
+          display_name: editFormData.value.display_name,
+          description: editFormData.value.description,
+          type: 'mcp',
+          category: editFormData.value.category,
+          tags: editFormData.value.tags,
+          command: editFormData.value.command,
+          working_directory: editFormData.value.working_directory,
+          environment_variables: {},
+          connection_type: editFormData.value.connection_type,
+          host: editFormData.value.host,
+          port: editFormData.value.port,
+          path: editFormData.value.path,
+          auto_start: editFormData.value.auto_start,
+          restart_on_failure: editFormData.value.restart_on_failure,
+          max_restart_attempts: editFormData.value.max_restart_attempts,
+          timeout: editFormData.value.timeout,
+          version: editFormData.value.version,
+          author: editFormData.value.author,
+          homepage: editFormData.value.homepage,
+          enabled: editFormData.value.enabled
+        }
+        
+        const response = await toolsApi.updateTool(editingTool.value!.id, updateData)
+        
+        // 处理API响应数据结构
+        let updatedTool = response
+        if (response && typeof response === 'object' && 'data' in response) {
+          updatedTool = response.data
+        }
+        
+        // 更新本地数据
+        const index = tools.value.findIndex(t => t.id === editingTool.value!.id)
+        if (index > -1) {
+          // 确保更新的工具对象包含完整的字段，特别是id
+          tools.value[index] = {
+            ...tools.value[index], // 保留原有字段
+            ...updatedTool,        // 覆盖更新的字段
+            id: editingTool.value!.id // 确保id字段存在
+          }
+        }
+        
+        showEditModal.value = false
+        const toolName = editingTool.value!.name
+        editingTool.value = null
+        
+        return { toolName }
+      } catch (error) {
+        // 使用增强的错误处理
+        handleApiError(error, '更新工具失败')
+        throw error
+      }
+    },
+    {
+      loadingMessage: '正在更新工具...',
+      successMessage: (result) => `工具 ${result.toolName} 更新成功`,
+      errorMessage: '更新工具失败，请稍后重试'
     }
-    
-    const updatedTool = await toolsApi.updateTool(editingTool.value.id, updateData)
-    
-    // 更新本地数据
-    const index = tools.value.findIndex(t => t.id === editingTool.value!.id)
-    if (index > -1) {
-      tools.value[index] = updatedTool
-    }
-    
-    showEditModal.value = false
-    editingTool.value = null
-    message.success('工具更新成功')
-  } catch (error) {
-    console.error('更新工具失败:', error)
-    message.error('更新失败')
-  }
+  )
 }
 
 // 删除工具
 const deleteTool = async (id: number) => {
-  try {
-    await toolsApi.deleteTool(id)
-    const index = tools.value.findIndex(tool => tool.id === id)
-    if (index > -1) {
-      tools.value.splice(index, 1)
-      message.success('删除成功')
+  const tool = tools.value.find(t => t.id === id)
+  if (!tool) return
+  
+  await ux.executeWithFeedback(
+    async () => {
+      try {
+        await toolsApi.deleteTool(id)
+        const index = tools.value.findIndex(tool => tool.id === id)
+        if (index > -1) {
+          tools.value.splice(index, 1)
+        }
+        return { toolName: tool.name }
+      } catch (error) {
+        // 使用增强的错误处理
+        handleApiError(error, '删除工具失败')
+        throw error
+      }
+    },
+    {
+      loadingMessage: '正在删除工具...',
+      successMessage: (result) => `工具 ${result.toolName} 删除成功`,
+      errorMessage: '删除工具失败，请稍后重试'
     }
-  } catch (error) {
-    console.error('删除工具失败:', error)
-    message.error('删除失败')
-  }
+  )
 }
 
 // 查看工具日志
@@ -1320,14 +1693,41 @@ const viewToolLogs = async (tool: Tool) => {
   try {
     currentToolName.value = tool.name
     showLogModal.value = true
-    currentToolLogs.value = '正在加载日志...'
+    logLoading.value = true
+    currentToolLogs.value = []
     
-    const logs = await toolsApi.getToolLogs(tool.id)
-    currentToolLogs.value = logs || '暂无日志数据'
+    const response = await toolsApi.getToolLogs(tool.id)
+    // 处理API响应数据结构
+    let logs = []
+    if (response.success && response.data && response.data.items) {
+      logs = response.data.items
+    } else if (response.data && Array.isArray(response.data)) {
+      logs = response.data
+    } else if (typeof response.data === 'string') {
+      try {
+        const parsedLogs = JSON.parse(response.data)
+        logs = Array.isArray(parsedLogs) ? parsedLogs : []
+      } catch {
+        // 如果不是JSON格式，创建一个简单的日志对象
+        logs = [{
+          id: Date.now(),
+          level: 'INFO',
+          message: response.data,
+          timestamp: new Date().toISOString(),
+          type: 'system'
+        }]
+      }
+    }
+    
+    currentToolLogs.value = logs
+    
+    filterLogs()
   } catch (error) {
     console.error('获取工具日志失败:', error)
-    currentToolLogs.value = '获取日志失败'
-    message.error('获取日志失败')
+    currentToolLogs.value = []
+    handleApiError(error, '获取日志失败')
+  } finally {
+    logLoading.value = false
   }
 }
 
@@ -1345,7 +1745,8 @@ const clearToolLogs = async () => {
   if (tool) {
     try {
       await toolsApi.clearToolLogs(tool.id)
-      currentToolLogs.value = '日志已清空'
+      currentToolLogs.value = []
+      filteredLogs.value = []
       message.success('日志清空成功')
     } catch (error) {
       console.error('清空日志失败:', error)
@@ -1354,61 +1755,61 @@ const clearToolLogs = async () => {
   }
 }
 
-// 查看工具性能
-const viewToolPerformance = async (tool: Tool) => {
-  try {
-    currentToolName.value = tool.name
-    showPerformanceModal.value = true
-    
-    const performance = await toolsApi.getToolPerformance(tool.id)
-    currentToolPerformance.value = performance
-  } catch (error) {
-    console.error('获取工具性能失败:', error)
-    message.error('获取性能数据失败')
-  }
-}
-
-// 刷新性能数据
-const refreshPerformance = async () => {
-  const tool = tools.value.find(t => t.name === currentToolName.value)
-  if (tool) {
-    await viewToolPerformance(tool)
-  }
-}
-
-// 获取性能颜色
-const getPerformanceColor = (percentage: number) => {
-  if (percentage < 50) return '#52c41a'
-  if (percentage < 80) return '#faad14'
-  return '#ff4d4f'
-}
-
-// 格式化字节数
-const formatBytes = (bytes: number) => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-// 格式化运行时间
-const formatUptime = (seconds: number) => {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const secs = Math.floor(seconds % 60)
+// 过滤日志
+const filterLogs = () => {
+  let logs = [...currentToolLogs.value]
   
-  if (days > 0) {
-    return `${days}天 ${hours}小时 ${minutes}分钟`
-  } else if (hours > 0) {
-    return `${hours}小时 ${minutes}分钟`
-  } else if (minutes > 0) {
-    return `${minutes}分钟 ${secs}秒`
-  } else {
-    return `${secs}秒`
+  // 按级别过滤
+  if (logLevelFilter.value) {
+    logs = logs.filter(log => log.level === logLevelFilter.value)
+  }
+  
+  // 按搜索文本过滤
+  if (logSearchText.value) {
+    const searchText = logSearchText.value.toLowerCase()
+    logs = logs.filter(log => 
+      log.message?.toLowerCase().includes(searchText) ||
+      log.type?.toLowerCase().includes(searchText)
+    )
+  }
+  
+  // 按时间排序（最新的在前）
+  logs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+  
+  filteredLogs.value = logs
+}
+
+// 获取日志级别类型
+const getLogLevelType = (level: string) => {
+  const levelMap = {
+    'DEBUG': 'info',
+    'INFO': 'success',
+    'WARNING': 'warning',
+    'ERROR': 'error',
+    'CRITICAL': 'error'
+  }
+  return levelMap[level] || 'default'
+}
+
+// 格式化日志时间
+const formatLogTime = (timestamp: string) => {
+  if (!timestamp) return ''
+  try {
+    const date = new Date(timestamp)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch {
+    return timestamp
   }
 }
+
+
 
 // 格式化日期时间
 const formatDateTime = (timestamp: string | number) => {
@@ -1427,10 +1828,20 @@ const updateToolsStatus = async () => {
   try {
     const statusPromises = tools.value.map(async (tool) => {
       try {
-        const status = await toolsApi.getToolStatus(tool.id)
-        return { id: tool.id, status: status.status }
-      } catch {
-        return { id: tool.id, status: 'error' }
+        // 检查工具ID是否有效
+        if (!ValidationUtils.isValidToolId(tool.id)) {
+          // 工具缺少有效的ID，跳过状态更新
+          return { id: tool.id, status: 'error' as const }
+        }
+        
+        const response = await toolsApi.getToolStatus(tool.id)
+        // 使用状态映射工具
+        const statusInfo = StatusMapper.mapToolStatus(response.data.status)
+        return { id: tool.id, status: statusInfo.frontendStatus }
+      } catch (error) {
+        // 静默处理单个工具状态获取失败
+        // 获取工具状态失败，静默处理
+        return { id: tool.id, status: 'error' as const }
       }
     })
     
@@ -1440,11 +1851,15 @@ const updateToolsStatus = async () => {
     statusResults.forEach(({ id, status }) => {
       const tool = tools.value.find(t => t.id === id)
       if (tool && tool.status !== status) {
-        tool.status = status as 'active' | 'inactive' | 'error'
+        const oldStatus = tool.status
+        tool.status = status
+        // 工具状态已更新
       }
     })
   } catch (error) {
     console.error('更新工具状态失败:', error)
+    // 使用增强的错误处理，但不显示用户提示（后台任务）
+    handleApiError(error, '更新工具状态失败', undefined, false, false)
   }
 }
 
@@ -1490,12 +1905,7 @@ onUnmounted(() => {
 }
 
 .page-header {
-  margin-bottom: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  margin-bottom: 16px;
 }
 
 .header-content {
@@ -1505,16 +1915,15 @@ onUnmounted(() => {
 }
 
 .header-left h1 {
-  margin: 0 0 12px 0;
-  font-size: 28px;
+  margin: 0 0 8px 0;
+  font-size: 24px;
   font-weight: 600;
-  color: white;
 }
 
 .header-left p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 16px;
+  color: var(--n-text-color-2);
+  font-size: 14px;
 }
 
 .stats-grid {
@@ -1622,5 +2031,127 @@ onUnmounted(() => {
   left: auto !important;
   transform-origin: top right !important;
   margin-top: 4px !important;
+}
+
+/* 日志显示样式 */
+.log-container {
+  max-height: 450px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.log-entry {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #d9d9d9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.log-entry:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.log-entry.log-debug {
+  border-left-color: #909399;
+}
+
+.log-entry.log-info {
+  border-left-color: #409eff;
+}
+
+.log-entry.log-warning {
+  border-left-color: #e6a23c;
+}
+
+.log-entry.log-error {
+  border-left-color: #f56c6c;
+}
+
+.log-entry.log-critical {
+  border-left-color: #f56c6c;
+  background: #fef0f0;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.log-timestamp {
+  color: #909399;
+  margin-right: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.log-type {
+  color: #606266;
+  font-weight: 500;
+}
+
+.log-message {
+  color: #303133;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-size: 14px;
+}
+
+.log-details {
+  margin-top: 8px;
+}
+
+.log-details :deep(.n-collapse) {
+  background: transparent;
+}
+
+.log-details :deep(.n-collapse-item__header) {
+  padding: 8px 0;
+  font-size: 12px;
+  color: #606266;
+}
+
+.log-details :deep(.n-collapse-item__content-wrapper) {
+  padding: 0;
+}
+
+.log-details :deep(.n-collapse-item__content-inner) {
+  padding: 8px 0;
+}
+
+/* 日志过滤器样式 */
+.log-container :deep(.n-select) {
+  background: white;
+}
+
+.log-container :deep(.n-input) {
+  background: white;
+}
+
+/* 滚动条样式 */
+.log-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>

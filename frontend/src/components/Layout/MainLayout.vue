@@ -13,10 +13,13 @@
       class="main-sider"
     >
       <div class="logo">
-        <n-icon size="32" color="#18a058">
-          <SettingsOutline />
-        </n-icon>
-        <span v-if="!collapsed" class="logo-text">MCPS.ONE</span>
+        <img 
+          :src="appStore.logo || logoImage" 
+          alt="MCPS.ONE Logo" 
+          class="logo-image"
+          :class="{ 'logo-collapsed': collapsed }"
+        />
+        <span v-if="!collapsed && appStore.showTitle" class="logo-text">{{ appStore.appTitle }}</span>
       </div>
       
       <n-menu
@@ -25,7 +28,9 @@
         :collapsed-icon-size="22"
         :options="menuOptions"
         :value="activeKey"
+        :expanded-keys="expandedKeys"
         @update:value="handleMenuSelect"
+        @update:expanded-keys="handleExpandedKeysUpdate"
       />
     </n-layout-sider>
     
@@ -41,18 +46,61 @@
           </div>
           <div class="header-right">
             <n-space>
-              <n-badge :value="12" :max="99">
-                <n-button quaternary circle>
-                  <template #icon>
-                    <n-icon><NotificationsOutline /></n-icon>
-                  </template>
-                </n-button>
-              </n-badge>
-              <n-button quaternary circle @click="feedbackRef?.openFeedback()">
-                <template #icon>
-                  <n-icon><ChatbubbleEllipsesOutline /></n-icon>
+              <!-- MCP服务模式切换 -->
+              <n-space align="center">
+                <n-dropdown 
+                  :options="mcpModeOptions" 
+                  @select="handleMcpModeChange"
+                  trigger="click"
+                  placement="bottom-end"
+                >
+                  <n-button type="primary" size="small">
+                    <template #icon>
+                      <n-icon><SettingsOutline /></n-icon>
+                    </template>
+                    {{ currentMcpModeLabel }}
+                    <template #suffix>
+                      <n-icon><ChevronDownOutline /></n-icon>
+                    </template>
+                  </n-button>
+                </n-dropdown>
+              </n-space>
+              
+              <!-- 使用说明提示 -->
+              <n-popover trigger="click" placement="bottom-end" :width="240">
+                <template #trigger>
+                  <n-button quaternary circle>
+                    <template #icon>
+                      <n-icon><HelpCircleOutline /></n-icon>
+                    </template>
+                  </n-button>
                 </template>
-              </n-button>
+                <div class="help-content">
+                  <h4>MCPS.ONE 使用指南</h4>
+                  <div class="mode-description">
+                    <p><strong>双模式：</strong>同时启用代理和MCP服务</p>
+                    <p><strong>代理模式：</strong>仅启用代理服务</p>
+                    <p><strong>MCP服务：</strong>仅启用MCP服务</p>
+                    <p><strong>已禁用：</strong>关闭所有服务</p>
+                  </div>
+                  <div class="tutorial-links">
+                    <n-space vertical>
+                      <n-button text type="primary" @click="router.push('/tutorial/tools')">
+                        📚 工具管理教程
+                      </n-button>
+                      <n-button text type="primary" @click="router.push('/tutorial/proxy-mode')">
+                        🔄 代理模式教程
+                      </n-button>
+                      <n-button text type="primary" @click="router.push('/tutorial/mcp-mode')">
+                        ⚙️ MCP模式教程
+                      </n-button>
+                      <n-button text type="info" @click="window.open('https://docs.mcps.one', '_blank')">
+                        📖 查看详细文档
+                      </n-button>
+                    </n-space>
+                  </div>
+                </div>
+              </n-popover>
               <n-dropdown :options="userOptions" @select="handleUserAction">
                 <n-button quaternary circle>
                   <template #icon>
@@ -74,12 +122,15 @@
     </n-layout>
   </n-layout>
   
-  <!-- 用户反馈组件 -->
-  <UserFeedback ref="feedbackRef" hide-button />
+  <!-- 全局加载指示器 -->
+  <GlobalLoadingIndicator />
+  
+  <!-- 增强的Toast通知 -->
+  <EnhancedToast />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, h } from 'vue'
+import { ref, computed, h, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   NLayout,
@@ -92,35 +143,67 @@ import {
   NBreadcrumbItem,
   NSpace,
   NButton,
-  NBadge,
   NDropdown,
+  NPopover,
   type MenuOption
 } from 'naive-ui'
 import {
-  SettingsOutline,
   HomeOutline,
   ExtensionPuzzleOutline,
   ServerOutline,
-  BarChartOutline,
   DocumentTextOutline,
-  NotificationsOutline,
   PersonOutline,
   LogOutOutline,
   SettingsSharp,
   WarningOutline,
-  ChatbubbleEllipsesOutline
+  ChevronDownOutline,
+  HelpCircleOutline,
+  SettingsOutline,
+  BookOutline
 } from '@vicons/ionicons5'
-import UserFeedback from '@/components/UserFeedback.vue'
+import GlobalLoadingIndicator from '@/components/GlobalLoadingIndicator.vue'
+import EnhancedToast from '@/components/EnhancedToast.vue'
+import { getServiceStatus, switchServiceMode } from '@/api/mcp-unified'
+import { useAppStore } from '@/stores/app'
+import { useAuthStore } from '@/stores/auth'
+import logoImage from '@/assets/logo.png'
+import logoDarkImage from '@/assets/logo-dark.png'
 
 const router = useRouter()
 const route = useRoute()
+const appStore = useAppStore()
+const authStore = useAuthStore()
 
 // 侧边栏折叠状态
 const collapsed = ref(false)
-const feedbackRef = ref()
+
+// 菜单展开状态
+const expandedKeys = ref<string[]>([])
+
+// MCP服务模式状态
+const currentMcpMode = ref('both') // 默认双模式
+const mcpModeLoading = ref(false)
 
 // 当前激活的菜单项
 const activeKey = computed(() => route.name as string)
+
+// 处理菜单展开状态更新
+const handleExpandedKeysUpdate = (keys: string[]) => {
+  expandedKeys.value = keys
+}
+
+// 根据当前路由更新展开状态
+const updateExpandedKeys = () => {
+  const currentKey = activeKey.value
+  const newExpandedKeys: string[] = []
+  
+  // 如果当前路由是代理服务的子菜单，展开代理服务菜单
+  if (['proxy-sessions', 'auto-session', 'mcp-proxy'].includes(currentKey)) {
+    newExpandedKeys.push('proxy')
+  }
+  
+  expandedKeys.value = newExpandedKeys
+}
 
 // 当前页面标题
 const currentPageTitle = computed(() => {
@@ -141,6 +224,35 @@ const currentPageTitle = computed(() => {
   return menuItem?.label || '首页'
 })
 
+// MCP模式标签
+const currentMcpModeLabel = computed(() => {
+  const modeLabels = {
+    'both': '双模式',
+    'proxy': '代理模式',
+    'server': 'MCP模式'
+  }
+  return modeLabels[currentMcpMode.value] || '未知模式'
+})
+
+// MCP模式下拉选项
+const mcpModeOptions = computed(() => [
+  {
+    label: '双模式',
+    key: 'both',
+    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
+  },
+  {
+    label: '代理模式',
+    key: 'proxy',
+    icon: () => h(NIcon, null, { default: () => h(ServerOutline) })
+  },
+  {
+    label: 'MCP模式',
+    key: 'server',
+    icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
+  }
+])
+
 // 菜单选项
 const menuOptions = ref<MenuOption[]>([
   {
@@ -154,24 +266,28 @@ const menuOptions = ref<MenuOption[]>([
     icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
   },
   {
-    label: 'MCP 统一管理',
-    key: 'mcp-unified',
-    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
-  },
-  {
-    label: '代理状态',
+    label: '代理服务',
     key: 'proxy',
     icon: () => h(NIcon, null, { default: () => h(ServerOutline) }),
     children: [
       {
-        label: '当前会话',
+        label: '自动会话',
+        key: 'auto-session'
+      },
+      {
+        label: '高级模式',
         key: 'proxy-sessions'
       },
       {
-        label: '工具状态',
-        key: 'proxy-status'
+        label: 'MCP代理管理',
+        key: 'mcp-proxy'
       }
     ]
+  },
+  {
+    label: '任务监控',
+    key: 'task-monitor',
+    icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
   },
   {
     label: '日志查看',
@@ -186,22 +302,31 @@ const menuOptions = ref<MenuOption[]>([
 ])
 
 // 用户下拉菜单选项
-const userOptions = [
+const userOptions = computed(() => [
   {
-    label: '系统设置',
-    key: 'system-settings',
-    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
+    label: authStore.user?.username || '用户',
+    key: 'user-info',
+    disabled: true
   },
   {
     type: 'divider',
     key: 'd1'
   },
   {
+    label: '系统设置',
+    key: 'settings',
+    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
+  },
+  {
+    type: 'divider',
+    key: 'd2'
+  },
+  {
     label: '退出登录',
     key: 'logout',
     icon: () => h(NIcon, null, { default: () => h(LogOutOutline) })
   }
-]
+])
 
 // 处理菜单选择
 const handleMenuSelect = (key: string) => {
@@ -213,14 +338,17 @@ const handleMenuSelect = (key: string) => {
     case 'tools':
       router.push('/tools')
       break
-    case 'mcp-unified':
-      router.push('/mcp-unified')
-      break
     case 'proxy-sessions':
       router.push('/proxy/sessions')
       break
-    case 'proxy-status':
-      router.push('/proxy/status')
+    case 'task-monitor':
+      router.push('/tasks/monitor')
+      break
+    case 'auto-session':
+      router.push('/proxy/auto-session')
+      break
+    case 'mcp-proxy':
+      router.push('/proxy/mcp-proxy')
       break
     case 'logs':
       router.push('/logs')
@@ -228,22 +356,104 @@ const handleMenuSelect = (key: string) => {
     case 'settings':
       router.push('/settings')
       break
+    case 'help':
+      router.push('/help')
+      break
+  }
+}
+
+// 处理MCP模式切换
+const handleMcpModeChange = async (key: string) => {
+  if (key === currentMcpMode.value || mcpModeLoading.value) {
+    return
+  }
+  
+  mcpModeLoading.value = true
+  
+  try {
+    // 根据模式确定启用的服务
+    let enableServer = false
+    let enableProxy = false
+    
+    switch (key) {
+      case 'both':
+        enableServer = true
+        enableProxy = true
+        break
+      case 'server':
+        enableServer = true
+        enableProxy = false
+        break
+      case 'proxy':
+        enableServer = false
+        enableProxy = true
+        break
+    }
+    
+    // 调用API切换模式
+    const result = await switchServiceMode({
+      enable_server: enableServer,
+      enable_proxy: enableProxy
+    })
+    currentMcpMode.value = key
+    
+    // 显示成功消息
+    window.$message?.success(`已切换到${currentMcpModeLabel.value}`)
+    
+  } catch (error) {
+    console.error('切换MCP模式失败:', error)
+    window.$message?.error(`切换模式失败: ${error.message}`)
+  } finally {
+    mcpModeLoading.value = false
+  }
+}
+
+// 获取当前MCP服务状态
+const fetchMcpStatus = async () => {
+  try {
+    const status = await getServiceStatus()
+    // 映射后端返回的mode值到前端的key
+    const modeMapping = {
+      'proxy': 'proxy',
+      'server': 'server', 
+      'both': 'both'
+    }
+    currentMcpMode.value = modeMapping[status.mode] || 'both'
+  } catch (error) {
+    console.error('获取MCP状态失败:', error)
   }
 }
 
 // 处理用户操作
-const handleUserAction = (key: string) => {
+const handleUserAction = async (key: string) => {
   switch (key) {
-    case 'system-settings':
+    case 'settings':
       router.push('/settings')
       break
     case 'logout':
-      // 处理退出登录
-      console.log('用户退出登录')
-      // TODO: 实现退出登录逻辑
+      try {
+        await authStore.logout()
+        window.$message?.success('已退出登录')
+        router.push('/login')
+      } catch (error) {
+        console.error('退出登录失败:', error)
+        window.$message?.error('退出登录失败')
+      }
       break
   }
 }
+
+// 监听路由变化，更新菜单展开状态
+watch(() => route.name, () => {
+  updateExpandedKeys()
+}, { immediate: true })
+
+// 组件挂载时获取当前状态
+onMounted(async () => {
+  await appStore.initializeApp()
+  fetchMcpStatus()
+  updateExpandedKeys()
+})
 </script>
 
 <style scoped>
@@ -260,14 +470,25 @@ const handleUserAction = (key: string) => {
   gap: 12px;
   padding: 0 20px;
   border-bottom: 1px solid var(--n-border-color);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
   color: white;
+}
+
+.logo-image {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+  transition: all 0.3s ease;
+}
+
+.logo-image.logo-collapsed {
+  height: 28px;
 }
 
 .logo-text {
   font-size: 20px;
   font-weight: bold;
-  color: white;
+  color: rgb(51, 54, 57);
   letter-spacing: 1px;
 }
 
@@ -309,5 +530,48 @@ const handleUserAction = (key: string) => {
   max-width: 1600px;
   margin: 0 auto;
   min-height: calc(100vh - 136px);
+}
+
+.help-content {
+  padding: 8px 0;
+}
+
+.help-content h4 {
+  margin: 0 0 12px 0;
+  color: var(--n-text-color);
+  font-size: 16px;
+}
+
+.help-content h5 {
+  margin: 12px 0 8px 0;
+  color: var(--n-text-color);
+  font-size: 14px;
+}
+
+.mode-description p {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--n-text-color-2);
+}
+
+.tutorial-links {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--n-divider-color);
+}
+
+.tutorial-links :deep(.n-button) {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 8px 12px;
+  margin: 2px 0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.tutorial-links :deep(.n-button:hover) {
+  background-color: var(--n-button-color-hover);
+  transform: translateX(2px);
 }
 </style>

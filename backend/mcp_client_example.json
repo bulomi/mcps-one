@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "python",
+      "args": [
+        "d:\\project\\MCPS.ONE\\backend\\app\\services\\mcp_server.py",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "PYTHONPATH": "d:\\project\\MCPS.ONE\\backend"
+      }
+    }
+  }
+}
