@@ -199,68 +199,6 @@ curl http://localhost:8000/api/v1/system/stats/
 # http://localhost:8000/docs
 ```
 
-## 🚀 部署说明
-
-### 环境要求
-
-- Python 3.11+
-- Node.js 18+
-- Git
-
-### Docker 部署（推荐）
-
-```bash
-# 克隆项目
-git clone https://github.com/bulomi/mcps-one.git
-cd mcps-one
-
-# 使用 Docker Compose 启动
-docker-compose up -d
-
-# 访问应用
-open http://localhost:8000
-```
-
-### 本地部署
-
-```bash
-# 安装 uv（如果尚未安装）
-pip install uv
-
-# 克隆项目
-git clone https://github.com/bulomi/mcps-one.git
-cd mcps-one
-
-# 后端设置
-cd backend
-uv venv
-.venv\Scripts\activate  # Windows
-# source .venv/bin/activate  # Linux/Mac
-uv pip install -r requirements.txt
-cp .env.example .env
-# 编辑 .env 文件配置数据库等信息
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-
-# 前端设置（新终端）
-cd frontend
-npm install
-npm run dev
-
-# 访问应用
-open http://localhost:5173
-```
-
-### 生产环境部署
-
-```bash
-# 构建前端
-cd frontend
-npm run build
-
-# 启动后端服务
-cd backend
-gunicorn app.main:app --workers 4 --host 0.0.0.0 --port 8000
-```
 
 ## ❓ 常见问题
 
