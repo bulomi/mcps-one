@@ -160,7 +160,7 @@ GET /api/v1/tools
 POST /api/v1/tools/call
 {
   "tool_name": "file_reader",
-  "arguments": {"path": "/path/to/file"}
+  "arguments": {"path": "./example-file.txt"}
 }
 
 # 添加工具

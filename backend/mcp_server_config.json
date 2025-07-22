@@ -1,17 +1,17 @@
 {
   "name": "MCPS.ONE MCP服务端",
   "description": "MCPS.ONE统一MCP工具服务端，提供所有已配置的MCP工具",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "transport": {
     "type": "stdio",
     "command": "python",
     "args": [
-      "d:\\project\\MCPS.ONE\\backend\\start_mcp_server_standalone.py",
+      "start_mcp_server.py",
       "--transport",
       "stdio"
     ],
     "env": {
-      "PYTHONPATH": "d:\\project\\MCPS.ONE\\backend"
+      "PYTHONPATH": "."
     }
   },
   "capabilities": {

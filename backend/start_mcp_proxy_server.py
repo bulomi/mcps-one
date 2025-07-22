@@ -21,7 +21,8 @@ def log_message(message):
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     log_msg = f"[{timestamp}] {message}"
     print(log_msg)
-    with open('mcp_proxy_server.log', 'a', encoding='utf-8') as f:
+    log_file = os.path.join(backend_dir, 'mcp_proxy_server.log')
+    with open(log_file, 'a', encoding='utf-8') as f:
         f.write(log_msg + '\n')
 
 async def start_mcp_proxy_server():
@@ -57,7 +58,8 @@ async def start_mcp_proxy_server():
 
 if __name__ == "__main__":
     # 清空日志文件
-    with open('mcp_proxy_server.log', 'w', encoding='utf-8') as f:
+    log_file = os.path.join(backend_dir, 'mcp_proxy_server.log')
+    with open(log_file, 'w', encoding='utf-8') as f:
         f.write("")
 
     try:

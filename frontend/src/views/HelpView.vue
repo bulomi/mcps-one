@@ -176,7 +176,7 @@
   "mcpServers": {
     "filesystem": {
       "command": "npx",
-      "args": ["@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"],
+      "args": ["@modelcontextprotocol/server-filesystem", "./allowed-files"],
       "env": {}
     },
     "brave-search": {
@@ -238,7 +238,7 @@ POST /api/mcp-unified/tools/call
 {
   "tool_name": "filesystem",
   "arguments": {
-    "path": "/path/to/file",
+    "path": "./example-file.txt",
     "action": "read"
   }
 }</code></pre>
@@ -264,7 +264,7 @@ POST /api/mcp-unified/service/switch-mode
   "mcpServers": {
     "mcps-one": {
       "command": "python",
-      "args": ["/path/to/mcps-one/backend/start_mcp_server.py"],
+      "args": ["./backend/start_mcp_server.py"],
       "env": {
         "MCP_SERVICE_MODE": "server"
       }
@@ -312,7 +312,7 @@ class MCPSClient:
 # 使用示例
 client = MCPSClient()
 tools = client.get_tools()
-result = client.call_tool("filesystem", {"path": "/tmp", "action": "list"})</code></pre>
+result = client.call_tool("filesystem", {"path": "./data", "action": "list"})</code></pre>
                 </div>
               </n-tab-pane>
             </n-tabs>

@@ -25,6 +25,7 @@ router = APIRouter(prefix="/logs", tags=["日志管理"])
 
 # 系统日志
 @router.get("/system", response_model=dict, summary="获取系统日志")
+@router.get("/system/", response_model=dict, summary="获取系统日志")
 async def get_system_logs(
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(50, ge=1, le=200, description="每页大小"),
@@ -291,6 +292,7 @@ async def get_log_stats(
         return error_response(message="获取日志统计失败", error_code=str(e))
 
 @router.get("/stats/summary", response_model=dict, summary="获取日志汇总统计")
+@router.get("/stats/summary/", response_model=dict, summary="获取日志汇总统计")
 async def get_log_summary(
     db: Session = Depends(get_db)
 ):

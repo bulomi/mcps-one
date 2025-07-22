@@ -54,8 +54,11 @@ class MCPSServer(BaseService):
             config_manager = init_unified_config_manager()
         
         self.mcp_service = MCPService()
+        
+        # 从配置中获取服务器名称
+        server_name = config_manager.get("app.name", "MCPS.ONE")
         self.server = FastMCP(
-            "MCPS.ONE",
+            server_name,
             tool_serializer=custom_tool_serializer,
             json_response=False
         )
@@ -634,7 +637,10 @@ class MCPSServer(BaseService):
     def run_sync_stdio(self):
         """同步方式运行 stdio 模式"""
         logger.info("启动 MCPS.ONE MCP 服务端 (stdio 模式)")
-        self.server.run(transport="stdio")
+        # 获取配置管理器中的横幅显示设置
+        config_manager = get_unified_config_manager()
+        show_banner = config_manager.get("mcp.server.show_banner", False)
+        self.server.run(transport="stdio", show_banner=show_banner)
 
     def run_sync_http(self, host: str = "127.0.0.1", port: int = 8001):
         """同步方式运行 HTTP 模式"""

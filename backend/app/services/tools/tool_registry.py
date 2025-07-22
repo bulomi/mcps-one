@@ -1040,8 +1040,8 @@ class ToolRegistry:
                 str(Path(data_dir) / "tools"),
                 str(Path.cwd() / "tools"),
                 str(Path.home() / ".mcp" / "tools"),
-                "/usr/local/bin",
-                "/opt/mcp/tools"
+                # Unix系统路径（仅在Unix系统上有效）
+                *(['/usr/local/bin', '/opt/mcp/tools'] if os.name == 'posix' else [])
             ]
 
         try:

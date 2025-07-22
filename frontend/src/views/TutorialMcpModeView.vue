@@ -110,7 +110,7 @@
   "mcpServers": {
     "mcps-one": {
       "command": "node",
-      "args": ["/path/to/mcps-one/mcp-client.js"],
+      "args": ["./mcp-client.js"],
       "env": {
         "MCPS_SERVER_URL": "http://localhost:3000"
       }
