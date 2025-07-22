@@ -94,7 +94,7 @@ cd backend
 # 检查uv是否安装
 if ! command -v uv &> /dev/null; then
     log_info "uv 未安装，正在安装..."
-    pip install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
     if [ $? -ne 0 ]; then
         log_error "安装 uv 失败"
         exit 1
