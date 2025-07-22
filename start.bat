@@ -59,7 +59,10 @@ if errorlevel 1 (
     call pip install uv
 )
 
-:: Create virtual environment in root directory
+:: Change to backend directory
+cd backend
+
+:: Create virtual environment in backend directory
 if not exist ".venv" (
     echo Creating virtual environment...
     call uv venv
@@ -72,15 +75,34 @@ call .venv\Scripts\activate.bat
 :: Install backend dependencies if needed
 if not exist ".venv\pyvenv.cfg" (
     echo Installing Python dependencies...
-    call uv pip install -r backend\requirements.txt
+    call uv pip install -r requirements.txt
 ) else (
     echo Checking if dependencies need update...
-    call uv pip install -r backend\requirements.txt --quiet
+    call uv pip install -r requirements.txt --quiet
+)
+
+:: Create data directory if needed
+if not exist "data" (
+    echo Creating data directory...
+    mkdir data
+)
+
+:: Initialize database
+echo Initializing database...
+if not exist "data\mcps.db" (
+    echo Creating database and running initial migration...
+    call alembic upgrade head
+) else (
+    echo Checking for database updates...
+    call alembic upgrade head
 )
 
 :: Start backend
 echo Starting backend server...
-start "Backend" cmd /k "call "%~dp0.venv\Scripts\activate.bat" && cd /d "%~dp0backend" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "Backend" cmd /k "call "%~dp0backend\.venv\Scripts\activate.bat" && cd /d "%~dp0backend" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+:: Return to project root
+cd ..
 
 echo Backend started on http://localhost:8000
 echo.

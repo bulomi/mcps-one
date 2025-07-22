@@ -139,6 +139,20 @@ if [ ! -d "data" ]; then
     mkdir -p data
 fi
 
+# 数据库初始化
+log_info "初始化数据库..."
+if [ -f "data/mcps.db" ]; then
+    log_info "数据库文件已存在，执行数据库升级..."
+else
+    log_info "数据库文件不存在，执行初始化..."
+fi
+alembic upgrade head
+if [ $? -ne 0 ]; then
+    log_error "数据库初始化失败"
+    exit 1
+fi
+log_success "数据库初始化完成"
+
 # 启动后端服务（后台运行）
 log_info "启动后端服务..."
 nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../backend.log 2>&1 &
