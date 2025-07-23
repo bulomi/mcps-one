@@ -48,7 +48,7 @@ start.bat
 ./start.sh
 
 # 3. 访问应用
-# 前端界面: http://localhost:5174
+# 前端界面: http://localhost:5173
 # 后端API: http://localhost:8000
 # API文档: http://localhost:8000/docs
 ```
