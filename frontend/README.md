@@ -1,39 +1,29 @@
-# frontend
+# MCPS.ONE 前端
 
-This template should help get you started developing with Vue 3 in Vite.
+基于 Vue 3 + TypeScript + Vite 构建的 MCP 工具管理平台前端界面。
 
-## Recommended IDE Setup
+## 环境要求
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- Node.js 18+
+- npm 或 yarn
 
-## Type Support for `.vue` Imports in TS
+## 快速开始
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
+```bash
+# 安装依赖
 npm install
-```
 
-### Compile and Hot-Reload for Development
-
-```sh
+# 开发模式
 npm run dev
-```
 
-### Type-Check, Compile and Minify for Production
-
-```sh
+# 构建生产版本
 npm run build
-```
 
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
+# 代码检查
 npm run lint
 ```
+
+## 相关文档
+
+- [前端 API 模块说明](src/api/README.md)
+- [Vite 配置参考](https://vite.dev/config/)
