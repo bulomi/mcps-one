@@ -9,6 +9,7 @@
 ![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![Vue](https://img.shields.io/badge/vue-3.x-green)
 ![FastAPI](https://img.shields.io/badge/fastapi-latest-teal)
+![FastMCP](https://img.shields.io/badge/fastmcp-2.10.6-blue)
 
 让 MCP 工具管理变得简单高效的可视化统一平台
 
