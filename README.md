@@ -56,9 +56,20 @@ start.bat
 ### Docker 部署
 
 ```bash
-# 使用 Docker Compose 启动
+# 启动开发环境
 docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
 ```
+
+详细的 Docker 部署指南请参考 [DOCKER.md](DOCKER.md)
 
 ## ⚙️ 配置说明
 
@@ -74,6 +85,7 @@ docker-compose up -d
 ## 📚 相关文档
 
 - **API 文档**: http://localhost:8000/docs
+- **Docker 部署**: [DOCKER.md](DOCKER.md)
 - **配置指南**: [docs/configuration.md](docs/configuration.md)
 - **快速入门**: [docs/getting-started.md](docs/getting-started.md)
 - **API 指南**: [docs/api-guide.md](docs/api-guide.md)

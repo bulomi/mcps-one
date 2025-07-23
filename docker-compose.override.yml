@@ -1,0 +1,39 @@
+# MCPS.ONE Docker Compose 开发环境覆盖配置
+# 此文件会自动与 docker-compose.yml 合并
+version: '3.8'
+
+services:
+  # 后端开发配置
+  backend:
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - DEV_RELOAD=true
+      - DEV_ACCESS_LOG=true
+      - LOG_LEVEL=DEBUG
+      - CORS_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173", "http://frontend:5173"]
+    volumes:
+      # 开发时挂载源代码以支持热重载
+      - ./backend:/app:cached
+      - backend_data:/app/data
+      - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  # 前端开发配置
+  frontend:
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:8000
+    volumes:
+      # 开发时挂载源代码以支持热重载
+      - ./frontend:/app:cached
+      - /app/node_modules
+    command: >
+      sh -c "npm install &&
+             npm run dev -- --host 0.0.0.0 --port 5173"
+    ports:
+      - "5173:5173"
+      - "24678:24678"  # Vite HMR 端口

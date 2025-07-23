@@ -1,0 +1,99 @@
+# MCPS.ONE Docker Compose 配置
+version: '3.8'
+
+services:
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mcps-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_MCP_PORT:-8001}:8001"
+    environment:
+      - PROJECT_NAME=MCPS.ONE
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - HOST=0.0.0.0
+      - PORT=8000
+      - API_V1_STR=/api/v1
+      - DATABASE_URL=sqlite:///./data/mcps.db
+      - SECRET_KEY=${SECRET_KEY:-your-super-secret-key-change-this-in-development}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - CORS_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173", "http://frontend:5173"]
+      - ALLOWED_HOSTS=["localhost", "127.0.0.1", "0.0.0.0", "backend"]
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_DIR=./logs
+      - DATA_DIR=./data
+      - UPLOAD_DIR=./uploads
+      - MCP_TIMEOUT=${MCP_TIMEOUT:-30}
+      - MCP_MAX_RETRIES=${MCP_MAX_RETRIES:-3}
+      - MCP_RETRY_DELAY=${MCP_RETRY_DELAY:-1}
+      - MCP_CONNECTION_POOL_SIZE=${MCP_CONNECTION_POOL_SIZE:-10}
+      - MCP_DEFAULT_PORT_RANGE_START=${MCP_DEFAULT_PORT_RANGE_START:-9000}
+      - MCP_DEFAULT_PORT_RANGE_END=${MCP_DEFAULT_PORT_RANGE_END:-9999}
+      - HEALTH_CHECK_ENABLED=true
+      - DOCS_ENABLED=true
+      - REDOC_ENABLED=true
+      - OPENAPI_ENABLED=true
+    volumes:
+      - backend_data:/app/data
+      - backend_logs:/app/logs
+      - backend_uploads:/app/uploads
+      - backend_config:/app/config
+    networks:
+      - mcps-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/monitoring/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mcps-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8000}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - mcps-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# 网络配置
+networks:
+  mcps-network:
+    driver: bridge
+    name: mcps-network
+
+# 数据卷配置
+volumes:
+  backend_data:
+    name: mcps-backend-data
+    driver: local
+  backend_logs:
+    name: mcps-backend-logs
+    driver: local
+  backend_uploads:
+    name: mcps-backend-uploads
+    driver: local
+  backend_config:
+    name: mcps-backend-config
+    driver: local
