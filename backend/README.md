@@ -424,12 +424,6 @@ tail -n 100 logs/app.log
 
 MIT License - 详见 [LICENSE](../LICENSE) 文件
 
-## 联系方式
-
-- 项目主页: [GitHub Repository]
-- 问题反馈: [GitHub Issues]
-- 文档: [项目文档]
-
 ---
 
 **MCPS.ONE** - 让 MCP 服务器管理变得简单高效！
