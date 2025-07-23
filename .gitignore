@@ -206,13 +206,13 @@ Thumbs.db
 
 # Trae AI specific
 .trae/
+.vercel/
 
 # Package files
 *.tgz
 *.tar.gz
 
 # Development documentation (contains internal development rules and sensitive info)
-docs/
 uploads/
 
 # Development plans and internal documentation
