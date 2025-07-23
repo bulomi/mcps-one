@@ -1,6 +1,7 @@
-<img src="frontend\src\assets\logo.png" align="center" alt="MCPS.ONE" width="200" height="200">
-<div align="center">
 
+<div align="center">
+<img src="frontend\src\assets\logo.png" align="center" alt="MCPS.ONE" width="200" height="200">
+<br>
 ![Version](https://img.shields.io/badge/version-v2.0.1-blue)
 ![mcps-one](https://img.shields.io/badge/mcps-one-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
