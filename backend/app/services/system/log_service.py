@@ -716,8 +716,9 @@ class LogService:
         if filters.get('tool_id'):
             query = query.filter(MCPLog.tool_id == filters['tool_id'])
 
-        if filters.get('session_id'):
-            query = query.filter(MCPLog.session_id == filters['session_id'])
+        # 会话管理功能已移除
+        # if filters.get('session_id'):
+        #     query = query.filter(MCPLog.session_id == filters['session_id'])
 
         if filters.get('message_type'):
             query = query.filter(MCPLog.message_type == filters['message_type'])

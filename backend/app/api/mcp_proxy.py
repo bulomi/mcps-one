@@ -19,7 +19,7 @@ from app.utils.response import success_response, error_response
 from app.services.mcp import MCPProxyServer
 from app.services.tools import ToolRegistry
 from app.services.integrations import RequestRouter
-from app.services.system import ProcessManager
+# 进程管理功能已移除
 from app.utils.exceptions import (
     MCPConnectionError,
     MCPTimeoutError,

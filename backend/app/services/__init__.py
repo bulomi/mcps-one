@@ -3,10 +3,9 @@
 # 新的模块化导入
 from .base import BaseService, MCPBaseService, CacheService, ErrorHandler
 from .mcp import MCPService, MCPSServer, MCPProxyServer, MCPUnifiedService, MCPAgentService
-from .system import SystemService, LogService, ProcessManager  # ConfigManager 已弃用
+from .system import SystemService, LogService  # ConfigManager 已弃用
 from .tools import ToolService, ToolRegistry
-from .tasks import TaskService
-from .sessions import SessionService, AutoSessionService
+# 任务和会话管理功能已移除
 from .users import UserService, EmailService
 from .integrations import ProxyService, RequestRouter, WebhookService
 
@@ -33,15 +32,10 @@ __all__ = [
     'SystemService',
     'LogService',
     # 'ConfigManager',  # 已弃用
-    'ProcessManager',
     # 工具服务
     'ToolService',
     'ToolRegistry',
-    # 任务服务
-    'TaskService',
-    # 会话服务
-    'SessionService',
-    'AutoSessionService',
+    # 任务和会话管理功能已移除
     # 用户服务
     'UserService',
     'EmailService',

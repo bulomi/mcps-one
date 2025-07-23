@@ -5,512 +5,165 @@
       <div class="header-content">
         <div class="header-left">
           <h1>系统设置</h1>
-          <p>统一配置管理 - 基于新的配置架构</p>
+          <p>基本配置管理</p>
         </div>
         <div class="header-right">
-          <n-space>
-            <n-badge :value="isDirty ? '●' : ''" color="orange" :show="isDirty">
-              <n-button type="primary" @click="saveAllSettings" :loading="saving" :disabled="!isDirty">
-                <template #icon>
-                  <n-icon><SaveOutline /></n-icon>
-                </template>
-                保存设置
-              </n-button>
-            </n-badge>
-
-          </n-space>
+          <n-button type="primary" @click="saveAllSettings" :loading="saving" :disabled="!isDirty">
+            <template #icon>
+              <n-icon><SaveOutline /></n-icon>
+            </template>
+            保存设置
+          </n-button>
         </div>
       </div>
     </div>
 
-
-
     <!-- 设置内容 -->
-    <n-tabs type="line" animated>
-      <!-- 网站设置 -->
-      <n-tab-pane name="app" tab="网站设置">
-        <n-card>
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="网站标题">
-              <n-input 
-                :value="config.app.name" 
-                @update:value="(value) => updateConfig('app.name', value)"
-                placeholder="请输入网站标题" 
-              />
-            </n-form-item>
-            <n-form-item label="网站副标题">
-              <n-input 
-                :value="config.app.subtitle" 
-                @update:value="(value) => updateConfig('app.subtitle', value)"
-                placeholder="请输入网站副标题" 
-              />
-            </n-form-item>
-            <n-form-item label="网站描述">
-              <n-input 
-                :value="config.app.description" 
-                @update:value="(value) => updateConfig('app.description', value)"
-                type="textarea"
-                placeholder="请输入网站描述" 
-              />
-            </n-form-item>
-            <n-form-item label="显示标题">
-              <n-switch 
-                :value="config.app.showTitle" 
-                @update:value="(value) => updateConfig('app.showTitle', value)"
-              />
-            </n-form-item>
-            <n-form-item label="LOGO设置">
-              <n-space vertical>
-                <n-radio-group 
-                  :value="logoType" 
-                  @update:value="(value) => logoType = value"
-                >
-                  <n-radio value="url">网络地址</n-radio>
-                  <n-radio value="upload">上传图片</n-radio>
-                </n-radio-group>
-                
-                <n-input 
-                  v-if="logoType === 'url'"
-                  :value="config.app.logoUrl" 
-                  @update:value="(value) => updateConfig('app.logoUrl', value)"
-                  placeholder="请输入LOGO网络地址" 
-                />
-                
-                <n-space v-if="logoType === 'upload'" vertical>
-                  <n-upload
-                    :file-list="logoFileList"
-                    @update:file-list="handleLogoUpload"
-                    accept="image/*"
-                    :max="1"
-                    list-type="image-card"
-                  >
-                    <n-button>选择图片</n-button>
-                  </n-upload>
-                  <n-text depth="3" style="font-size: 12px;">
-                    支持 JPG、PNG、GIF 格式，建议尺寸 200x60 像素
-                  </n-text>
-                </n-space>
-                
+    <n-space vertical size="large">
+      <!-- 基本设置 -->
+      <n-card title="基本设置">
+        <n-form label-placement="left" label-width="120px">
+          <n-form-item label="应用名称">
+            <n-input 
+              :value="config.app.name" 
+              @update:value="(value) => updateConfig('app.name', value)"
+              placeholder="请输入应用名称" 
+            />
+          </n-form-item>
+          <n-form-item label="应用描述">
+            <n-input 
+              :value="config.app.description" 
+              @update:value="(value) => updateConfig('app.description', value)"
+              type="textarea"
+              placeholder="请输入应用描述" 
+            />
+          </n-form-item>
+          <n-form-item label="应用LOGO">
+            <div class="logo-upload-container">
+              <!-- LOGO预览和上传区域 - 单行显示 -->
+              <div class="logo-upload-row">
                 <!-- LOGO预览 -->
-                <n-space v-if="config.app.logoUrl" align="center">
-                  <n-text>预览：</n-text>
-                  <img 
-                    :src="config.app.logoUrl" 
-                    alt="LOGO预览" 
-                    style="max-height: 40px; max-width: 120px; object-fit: contain;"
-                    @error="handleLogoError"
-                  />
-                </n-space>
-              </n-space>
-            </n-form-item>
-          </n-form>
-        </n-card>
-      </n-tab-pane>
+                <div v-if="config.app.logoUrl" class="logo-preview-inline">
+                  <div class="logo-image-wrapper">
+                    <img :src="config.app.logoUrl" alt="当前LOGO" class="logo-image" />
+                  </div>
+                  <div class="logo-status">
+                    <n-icon><CheckmarkCircleOutline /></n-icon>
+                    <span>已设置</span>
+                  </div>
+                  <n-button
+                    size="small"
+                    type="error"
+                    ghost
+                    @click="removeLogo"
+                    class="remove-logo-btn"
+                  >
+                    <template #icon>
+                      <n-icon><TrashOutline /></n-icon>
+                    </template>
+                    删除
+                  </n-button>
+                </div>
 
-
-
-      <!-- 通知配置 -->
-      <n-tab-pane name="notifications" tab="通知配置">
-        <n-card>
-          <n-grid :cols="2" :x-gap="24">
-            <!-- 邮件通知 -->
-            <n-grid-item>
-              <n-form label-placement="left" label-width="120px">
-                <n-form-item label="邮件通知">
-                  <n-switch 
-                    :value="config.notifications.email.enabled" 
-                    @update:value="(value) => updateConfig('notifications.email.enabled', value)"
-                  />
-                </n-form-item>
-                <template v-if="config.notifications.email.enabled">
-                  <n-form-item label="SMTP主机">
-                    <n-input 
-                      :value="config.notifications.email.smtpHost" 
-                      @update:value="(value) => updateConfig('notifications.email.smtpHost', value)"
-                      placeholder="SMTP服务器地址" 
-                    />
-                  </n-form-item>
-                  <n-form-item label="SMTP端口">
-                    <n-input-number 
-                      :value="config.notifications.email.smtpPort" 
-                      @update:value="(value) => updateConfig('notifications.email.smtpPort', value)"
-                      :min="1"
-                      :max="65535"
-                    />
-                  </n-form-item>
-                  <n-form-item label="发件人邮箱">
-                    <n-input 
-                      :value="config.notifications.email.senderEmail" 
-                      @update:value="(value) => updateConfig('notifications.email.senderEmail', value)"
-                      placeholder="发件人邮箱" 
-                    />
-                  </n-form-item>
-                  <n-form-item label="邮箱密码">
-                    <n-input 
-                      :value="config.notifications.email.password" 
-                      @update:value="(value) => updateConfig('notifications.email.password', value)"
-                      type="password"
-                      show-password-on="click"
-                      placeholder="邮箱密码或授权码" 
-                    />
-                  </n-form-item>
-                  <n-form-item label="收件人邮箱">
-                    <n-input 
-                      :value="config.notifications.email.recipientEmail" 
-                      @update:value="(value) => updateConfig('notifications.email.recipientEmail', value)"
-                      placeholder="接收通知的邮箱地址" 
-                    />
-                  </n-form-item>
-                  <n-form-item label="使用SSL">
-                    <n-switch 
-                      :value="config.notifications.email.useSSL" 
-                      @update:value="(value) => updateConfig('notifications.email.useSSL', value)"
-                    />
-                  </n-form-item>
-                  <n-form-item label="使用TLS">
-                    <n-switch 
-                      :value="config.notifications.email.useTLS" 
-                      @update:value="(value) => updateConfig('notifications.email.useTLS', value)"
-                    />
-                  </n-form-item>
-                </template>
-              </n-form>
-            </n-grid-item>
-
-            <!-- Webhook通知 -->
-            <n-grid-item>
-              <n-form label-placement="left" label-width="120px">
-                <n-form-item label="Webhook通知">
-                  <n-switch 
-                    :value="config.notifications.webhook.enabled" 
-                    @update:value="(value) => updateConfig('notifications.webhook.enabled', value)"
-                  />
-                </n-form-item>
-                <template v-if="config.notifications.webhook.enabled">
-                  <n-form-item label="Webhook URL">
-                    <n-input 
-                      :value="config.notifications.webhook.url" 
-                      @update:value="(value) => updateConfig('notifications.webhook.url', value)"
-                      placeholder="Webhook回调地址" 
-                    />
-                  </n-form-item>
-                  <n-form-item label="请求方法">
-                    <n-select
-                      :value="config.notifications.webhook.method"
-                      @update:value="(value) => updateConfig('notifications.webhook.method', value)"
-                      :options="webhookMethodOptions"
-                      placeholder="选择HTTP方法"
-                    />
-                  </n-form-item>
-                  <n-form-item label="超时时间(秒)">
-                    <n-input-number 
-                      :value="config.notifications.webhook.timeout" 
-                      @update:value="(value) => updateConfig('notifications.webhook.timeout', value)"
-                      :min="1"
-                      :max="300"
-                    />
-                  </n-form-item>
-                  <n-form-item label="重试次数">
-                    <n-input-number 
-                      :value="config.notifications.webhook.retryCount" 
-                      @update:value="(value) => updateConfig('notifications.webhook.retryCount', value)"
-                      :min="0"
-                      :max="10"
-                    />
-                  </n-form-item>
-                  <n-form-item label="自定义Headers">
-                    <n-input 
-                      :value="config.notifications.webhook.headers" 
-                      @update:value="(value) => updateConfig('notifications.webhook.headers', value)"
-                      type="textarea"
-                      placeholder='JSON格式，如: {"Authorization": "Bearer token"}'
-                      :rows="3"
-                    />
-                  </n-form-item>
-                </template>
-              </n-form>
-            </n-grid-item>
-          </n-grid>
-
-          <!-- 通知事件 -->
-          <n-divider />
-          <n-form label-placement="left" label-width="120px">
-            <n-form-item label="通知事件">
-              <n-checkbox-group 
-                :value="config.notifications.events" 
-                @update:value="(value) => updateConfig('notifications.events', value)"
-              >
-                <n-grid :cols="2" :x-gap="16" :y-gap="8">
-                   <n-grid-item>
-                     <n-checkbox value="error_occurred" label="工具错误" />
-                   </n-grid-item>
-                   <n-grid-item>
-                     <n-checkbox value="system_stop" label="系统错误" />
-                   </n-grid-item>
-                   <n-grid-item>
-                     <n-checkbox value="task_completed" label="备份完成" />
-                   </n-grid-item>
-                   <n-grid-item>
-                     <n-checkbox value="task_failed" label="服务停止" />
-                   </n-grid-item>
-                 </n-grid>
-              </n-checkbox-group>
-            </n-form-item>
-          </n-form>
-        </n-card>
-      </n-tab-pane>
-
-      <!-- MCP配置 -->
-      <n-tab-pane name="mcp" tab="MCP配置">
-        <n-grid :cols="2" :x-gap="24">
-          <!-- 基础MCP配置 -->
-          <n-grid-item>
-            <n-card>
-              <n-form label-placement="left" label-width="150px">
-                <n-form-item label="最大进程数">
-                  <n-input-number 
-                    :value="config.mcp.maxProcesses" 
-                    @update:value="(value) => updateConfig('mcp.maxProcesses', value)"
-                    :min="1"
-                    :max="100"
-                  />
-                </n-form-item>
-                <n-form-item label="进程超时(秒)">
-                  <n-input-number 
-                    :value="config.mcp.processTimeout" 
-                    @update:value="(value) => updateConfig('mcp.processTimeout', value)"
-                    :min="1"
-                    :max="300"
-                  />
-                </n-form-item>
-                <n-form-item label="重启延迟(秒)">
-                  <n-input-number 
-                    :value="config.mcp.restartDelay" 
-                    @update:value="(value) => updateConfig('mcp.restartDelay', value)"
-                    :min="1"
-                    :max="60"
-                  />
-                </n-form-item>
-                <n-form-item label="工具目录">
-                  <n-input 
-                    :value="config.mcp.toolsDir" 
-                    @update:value="(value) => updateConfig('mcp.toolsDir', value)"
-                    placeholder="工具存储目录" 
-                  />
-                </n-form-item>
-                <n-form-item label="日志目录">
-                  <n-input 
-                    :value="config.mcp.logsDir" 
-                    @update:value="(value) => updateConfig('mcp.logsDir', value)"
-                    placeholder="日志存储目录" 
-                  />
-                </n-form-item>
-              </n-form>
-            </n-card>
-          </n-grid-item>
-
-          <!-- MCP代理配置 -->
-          <n-grid-item>
-            <n-card>
-              <n-form label-placement="left" label-width="150px">
-                <n-form-item label="启用代理">
-                  <n-switch 
-                    :value="config.mcp.proxy.enabled" 
-                    @update:value="(value) => updateConfig('mcp.proxy.enabled', value)"
-                  />
-                </n-form-item>
-                <n-form-item label="自动启动">
-                  <n-switch 
-                    :value="config.mcp.proxy.autoStart" 
-                    @update:value="(value) => updateConfig('mcp.proxy.autoStart', value)"
-                  />
-                </n-form-item>
-                <n-form-item label="优雅关闭">
-                  <n-switch 
-                    :value="config.mcp.proxy.gracefulShutdown" 
-                    @update:value="(value) => updateConfig('mcp.proxy.gracefulShutdown', value)"
-                  />
-                </n-form-item>
-                <n-form-item label="启动超时(秒)">
-                  <n-input-number 
-                    :value="config.mcp.proxy.toolStartupTimeout" 
-                    @update:value="(value) => updateConfig('mcp.proxy.toolStartupTimeout', value)"
-                    :min="10"
-                    :max="300"
-                  />
-                </n-form-item>
-                <n-form-item label="健康检查间隔(秒)">
-                  <n-input-number 
-                    :value="config.mcp.proxy.healthCheckInterval" 
-                    @update:value="(value) => updateConfig('mcp.proxy.healthCheckInterval', value)"
-                    :min="5"
-                    :max="300"
-                  />
-                </n-form-item>
-                <n-form-item label="启用指标">
-                  <n-switch 
-                    :value="config.mcp.proxy.enableMetrics" 
-                    @update:value="(value) => updateConfig('mcp.proxy.enableMetrics', value)"
-                  />
-                </n-form-item>
-              </n-form>
-            </n-card>
-          </n-grid-item>
-        </n-grid>
-      </n-tab-pane>
-
-      <!-- 日志配置 -->
-      <n-tab-pane name="logging" tab="日志配置">
-        <n-card>
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="日志级别">
-              <n-select
-                :value="config.logging.level"
-                @update:value="(value) => updateConfig('logging.level', value)"
-                :options="logLevelOptions"
-                placeholder="选择日志级别"
-              />
-            </n-form-item>
-            <n-form-item label="日志格式">
-              <n-input 
-                :value="config.logging.format" 
-                @update:value="(value) => updateConfig('logging.format', value)"
-                placeholder="日志格式字符串" 
-              />
-            </n-form-item>
-            <n-form-item label="日志文件">
-              <n-input 
-                :value="config.logging.file" 
-                @update:value="(value) => updateConfig('logging.file', value)"
-                placeholder="日志文件路径" 
-              />
-            </n-form-item>
-            <n-form-item label="最大文件大小">
-              <n-input 
-                :value="config.logging.maxFileSize" 
-                @update:value="(value) => updateConfig('logging.maxFileSize', value)"
-                placeholder="如：10MB" 
-              />
-            </n-form-item>
-            <n-form-item label="备份文件数">
-              <n-input-number 
-                :value="config.logging.backupCount" 
-                @update:value="(value) => updateConfig('logging.backupCount', value)"
-                :min="1"
-                :max="100"
-              />
-            </n-form-item>
-            <n-form-item label="控制台输出">
-              <n-switch 
-                :value="config.logging.consoleOutput" 
-                @update:value="(value) => updateConfig('logging.consoleOutput', value)"
-              />
-            </n-form-item>
-          </n-form>
-        </n-card>
-      </n-tab-pane>
+                <!-- 上传按钮 -->
+                 <div class="upload-button-section">
+                   <n-upload
+                     ref="logoUploadRef"
+                     :max="1"
+                     accept="image/*"
+                     :show-file-list="false"
+                     @before-upload="handleLogoUpload"
+                     class="logo-upload"
+                   >
+                     <n-button type="primary" ghost class="upload-button">
+                       <template #icon>
+                         <n-icon><CloudUploadOutline /></n-icon>
+                       </template>
+                       {{ config.app.logoUrl ? '更换LOGO' : '上传LOGO' }}
+                     </n-button>
+                   </n-upload>
+                   <n-text depth="3" class="upload-tips-text">
+                     支持 JPG/PNG/SVG，最大5MB
+                   </n-text>
+                 </div>
+              </div>
+            </div>
+          </n-form-item>
+        </n-form>
+      </n-card>
 
       <!-- 安全设置 -->
-      <n-tab-pane name="security" tab="安全设置">
-        <n-card>
-          <n-form label-placement="left" label-width="150px">
-            <n-form-item label="修改密码">
-              <n-space vertical style="width: 100%; max-width: 400px;">
-                <n-input
-                  v-model:value="passwordForm.oldPassword"
-                  type="password"
-                  show-password-on="click"
-                  placeholder="请输入当前密码"
-                  :status="passwordForm.errors.oldPassword ? 'error' : undefined"
-                />
-                <n-text v-if="passwordForm.errors.oldPassword" type="error" style="font-size: 12px;">
-                  {{ passwordForm.errors.oldPassword }}
-                </n-text>
-                
-                <n-input
-                  v-model:value="passwordForm.newPassword"
-                  type="password"
-                  show-password-on="click"
-                  placeholder="请输入新密码"
-                  :status="passwordForm.errors.newPassword ? 'error' : undefined"
-                />
-                <n-text v-if="passwordForm.errors.newPassword" type="error" style="font-size: 12px;">
-                  {{ passwordForm.errors.newPassword }}
-                </n-text>
-                
-                <n-input
-                  v-model:value="passwordForm.confirmPassword"
-                  type="password"
-                  show-password-on="click"
-                  placeholder="请确认新密码"
-                  :status="passwordForm.errors.confirmPassword ? 'error' : undefined"
-                />
-                <n-text v-if="passwordForm.errors.confirmPassword" type="error" style="font-size: 12px;">
-                  {{ passwordForm.errors.confirmPassword }}
-                </n-text>
-                
-                <n-space>
-                  <n-button
-                    type="primary"
-                    @click="changePassword"
-                    :loading="passwordForm.loading"
-                    :disabled="!isPasswordFormValid"
-                  >
-                    修改密码
-                  </n-button>
-                  <n-button @click="resetPasswordForm">
-                    重置
-                  </n-button>
-                </n-space>
-                
-                <n-text depth="3" style="font-size: 12px;">
-                  密码要求：至少8位字符，包含字母和数字
-                </n-text>
+      <n-card title="安全设置">
+        <n-form label-placement="left" label-width="120px">
+          <n-form-item label="修改密码">
+            <n-space vertical style="width: 100%; max-width: 400px;">
+              <n-input
+                v-model:value="passwordForm.oldPassword"
+                type="password"
+                show-password-on="click"
+                placeholder="请输入当前密码"
+              />
+              <n-input
+                v-model:value="passwordForm.newPassword"
+                type="password"
+                show-password-on="click"
+                placeholder="请输入新密码"
+              />
+              <n-input
+                v-model:value="passwordForm.confirmPassword"
+                type="password"
+                show-password-on="click"
+                placeholder="请确认新密码"
+              />
+              <n-space>
+                <n-button
+                  type="primary"
+                  @click="changePassword"
+                  :loading="passwordForm.loading"
+                  :disabled="!isPasswordFormValid"
+                >
+                  修改密码
+                </n-button>
+                <n-button @click="resetPasswordForm">
+                  重置
+                </n-button>
               </n-space>
-            </n-form-item>
-          </n-form>
-        </n-card>
-      </n-tab-pane>
-
-    </n-tabs>
+              <n-text depth="3" style="font-size: 12px;">
+                密码要求：至少8位字符，包含字母和数字
+              </n-text>
+            </n-space>
+          </n-form-item>
+        </n-form>
+      </n-card>
+    </n-space>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   NCard,
   NButton,
   NSpace,
   NInput,
-  NInputNumber,
-  NSelect,
   NIcon,
   NForm,
   NFormItem,
-  NSwitch,
-  NGrid,
-  NGridItem,
-  NTabs,
-  NTabPane,
-  NCheckbox,
-  NCheckboxGroup,
-  NStatistic,
-  NBadge,
-  NRadioGroup,
-  NRadio,
-  NUpload,
   NText,
-  useMessage,
-  type UploadFileInfo
+  NUpload,
+  NUploadDragger,
+  NP,
+  useMessage
 } from 'naive-ui'
 import {
-  SaveOutline
+  SaveOutline,
+  CloudUploadOutline,
+  TrashOutline,
+  CheckmarkCircleOutline
 } from '@vicons/ionicons5'
 import { useConfigStore } from '@/stores/config'
-import { systemApi } from '@/api/system'
 import { authApi } from '@/api/auth'
-import { logLevelOptions } from '@/constants/logLevels'
+import { systemApi } from '@/api/system'
 
 const configStore = useConfigStore()
 const message = useMessage()
@@ -519,27 +172,19 @@ const message = useMessage()
 const config = computed(() => configStore.config)
 
 // 加载状态
-const loading = computed(() => configStore.loading)
 const saving = ref(false)
 const isDirty = computed(() => configStore.isDirty)
-
-// LOGO相关状态
-const logoType = ref('url')
-const logoFileList = ref<UploadFileInfo[]>([])
 
 // 密码修改表单
 const passwordForm = ref({
   oldPassword: '',
   newPassword: '',
   confirmPassword: '',
-  loading: false,
-  errors: {
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  }
+  loading: false
 })
 
+// LOGO上传引用
+const logoUploadRef = ref()
 
 
 
@@ -550,12 +195,8 @@ const passwordForm = ref({
 
 
 
-// Webhook方法选项
-const webhookMethodOptions = [
-  { label: 'POST', value: 'POST' },
-  { label: 'PUT', value: 'PUT' },
-  { label: 'PATCH', value: 'PATCH' }
-]
+
+
 
 // 密码表单验证
 const isPasswordFormValid = computed(() => {
@@ -564,8 +205,6 @@ const isPasswordFormValid = computed(() => {
          passwordForm.value.confirmPassword === passwordForm.value.newPassword &&
          /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/.test(passwordForm.value.newPassword)
 })
-
-
 
 // 处理配置更新
 const updateConfig = (key: string, value: any) => {
@@ -586,39 +225,10 @@ const saveAllSettings = async () => {
   }
 }
 
-// 验证密码表单
-const validatePasswordForm = () => {
-  const errors = {
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  }
-
-  if (!passwordForm.value.oldPassword) {
-    errors.oldPassword = '请输入当前密码'
-  }
-
-  if (!passwordForm.value.newPassword) {
-    errors.newPassword = '请输入新密码'
-  } else if (passwordForm.value.newPassword.length < 8) {
-    errors.newPassword = '密码长度至少8位'
-  } else if (!/^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/.test(passwordForm.value.newPassword)) {
-    errors.newPassword = '密码必须包含字母和数字'
-  }
-
-  if (!passwordForm.value.confirmPassword) {
-    errors.confirmPassword = '请确认新密码'
-  } else if (passwordForm.value.confirmPassword !== passwordForm.value.newPassword) {
-    errors.confirmPassword = '两次输入的密码不一致'
-  }
-
-  passwordForm.value.errors = errors
-  return !Object.values(errors).some(error => error !== '')
-}
-
 // 修改密码
 const changePassword = async () => {
-  if (!validatePasswordForm()) {
+  if (!isPasswordFormValid.value) {
+    message.error('请检查密码输入')
     return
   }
 
@@ -632,11 +242,7 @@ const changePassword = async () => {
     resetPasswordForm()
   } catch (error: any) {
     console.error('密码修改失败:', error)
-    if (error.response?.data?.detail) {
-      message.error(error.response.data.detail)
-    } else {
-      message.error('密码修改失败，请重试')
-    }
+    message.error('密码修改失败，请重试')
   } finally {
     passwordForm.value.loading = false
   }
@@ -647,74 +253,62 @@ const resetPasswordForm = () => {
   passwordForm.value.oldPassword = ''
   passwordForm.value.newPassword = ''
   passwordForm.value.confirmPassword = ''
-  passwordForm.value.errors = {
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  }
 }
 
-
-   
-
-
-
-// LOGO上传处理
-const handleLogoUpload = async (fileList: UploadFileInfo[]) => {
-  logoFileList.value = fileList
-  if (fileList.length > 0) {
-    const file = fileList[0].file
-    if (file) {
-      try {
-        // 创建FormData对象
-        const formData = new FormData()
-        formData.append('file', file)
-        
-        // 调用后端API上传文件
-        const response = await systemApi.uploadLogo(formData)
-        
-        if (response.success && response.data?.url) {
-          // 更新配置中的LOGO URL
-          updateConfig('app.logoUrl', response.data.url)
-          // 保存配置到服务器
-          await configStore.saveToServer()
-          message.success('LOGO上传并保存成功')
-        } else {
-          message.error(response.message || 'LOGO上传失败')
-        }
-      } catch (error) {
-        console.error('LOGO上传失败:', error)
-        message.error('LOGO上传失败，请重试')
-      }
+// 处理LOGO上传
+const handleLogoUpload = async (options: { file: any, fileList: any[] }) => {
+  try {
+    // Naive UI 的 before-upload 事件传递的是包装后的文件对象
+    // 需要获取原始的 File 对象
+    const file = options.file.file || options.file
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      message.error('请选择图片文件')
+      return false
     }
-  } else {
-    updateConfig('app.logoUrl', '')
-    // 保存配置到服务器
-    await configStore.saveToServer()
+    
+    // 验证文件大小（5MB）
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('文件大小不能超过5MB')
+      return false
+    }
+    
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await systemApi.uploadLogo(formData)
+    
+    if (response.success) {
+      updateConfig('app.logoUrl', response.data.url)
+      message.success('LOGO上传成功')
+    } else {
+      message.error('LOGO上传失败')
+    }
+  } catch (error) {
+    console.error('LOGO上传失败:', error)
+    message.error('LOGO上传失败，请重试')
   }
+  return false // 阻止默认上传行为
 }
 
-// LOGO加载错误处理
-const handleLogoError = () => {
-  message.warning('LOGO加载失败，请检查地址是否正确')
+// 删除LOGO
+const removeLogo = () => {
+  updateConfig('app.logoUrl', '')
+  message.success('LOGO已删除')
 }
 
 // 组件挂载时初始化
 onMounted(async () => {
   configStore.initialize()
-  // 等待配置加载完成
   await configStore.loadFromServer()
-  // 根据当前LOGO地址判断类型
-  if (config.value.app.logoUrl) {
-    logoType.value = config.value.app.logoUrl.startsWith('data:') ? 'upload' : 'url'
-  }
 })
 </script>
 
 <style scoped>
 .system-settings-view {
   padding: 24px;
-  max-width: 1200px;
+  max-width: 800px;
   margin: 0 auto;
 }
 
@@ -740,31 +334,97 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-
-
-.n-tabs {
-  margin-top: 16px;
-}
-
-.n-card {
-  margin-bottom: 16px;
-}
-
 .n-form-item {
   margin-bottom: 16px;
 }
 
-.n-input,
-.n-input-number,
-.n-select {
+.n-input {
   width: 100%;
 }
 
-.n-checkbox-group .n-space {
+/* LOGO上传容器 */
+.logo-upload-container {
   width: 100%;
 }
 
-.n-data-table {
-  margin-top: 16px;
+.logo-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logo-preview-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+
+.logo-image-wrapper {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--n-border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+
+.logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--n-color-success);
+}
+
+.remove-logo-btn {
+  flex-shrink: 0;
+}
+
+.upload-button-section {
+   display: flex;
+   flex-direction: column;
+   gap: 8px;
+   align-items: flex-start;
+ }
+ 
+ .upload-button {
+   flex-shrink: 0;
+ }
+ 
+ .upload-tips-text {
+   font-size: 12px;
+   line-height: 1.4;
+ }
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .logo-upload-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .logo-preview-inline {
+    justify-content: center;
+  }
+  
+  .upload-button-section {
+     align-items: center;
+   }
 }
 </style>

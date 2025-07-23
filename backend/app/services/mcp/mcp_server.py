@@ -12,6 +12,7 @@ import traceback
 from typing import Dict, List, Optional, Any, Sequence
 from datetime import datetime
 from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
 
 from fastmcp import FastMCP
 from mcp.types import (
@@ -59,8 +60,7 @@ class MCPSServer(BaseService):
         server_name = config_manager.get("app.name", "MCPS.ONE")
         self.server = FastMCP(
             server_name,
-            tool_serializer=custom_tool_serializer,
-            json_response=False
+            tool_serializer=custom_tool_serializer
         )
         self.start_time = time.time()
         self.request_count = 0
@@ -333,8 +333,8 @@ class MCPSServer(BaseService):
     async def _register_actual_tools(self):
         """动态注册实际的MCP工具"""
         try:
-            # 等待MCP服务初始化完成
-            await asyncio.sleep(2)
+            # 移除延迟，直接开始注册工具
+            logger.info("开始注册实际的MCP工具...")
 
             db = SessionLocal()
             tools = db.query(MCPTool).filter(
@@ -344,15 +344,27 @@ class MCPSServer(BaseService):
 
             logger.info(f"找到 {len(tools)} 个运行中的工具")
 
+            # 如果没有运行中的工具，直接返回
+            if not tools:
+                logger.info("没有运行中的工具需要注册")
+                return
+
             for tool in tools:
                 try:
-                    client = await self.mcp_service.get_client_by_name(tool.name)
+                    # 添加超时控制，避免单个工具阻塞整个注册过程
+                    client = await asyncio.wait_for(
+                        self.mcp_service.get_client_by_name(tool.name),
+                        timeout=5.0
+                    )
                     if not client:
                         logger.warning(f"无法获取工具 {tool.name} 的客户端")
                         continue
 
-                    # 获取工具的能力
-                    capabilities = await client.list_tools()
+                    # 获取工具的能力，添加超时控制
+                    capabilities = await asyncio.wait_for(
+                        client.list_tools(),
+                        timeout=10.0
+                    )
                     logger.info(f"工具 {tool.name} 有 {len(capabilities)} 个能力")
 
                     for cap in capabilities:
@@ -406,15 +418,19 @@ class MCPSServer(BaseService):
 
                         logger.info(f"已注册工具: {tool_name}")
 
+                except asyncio.TimeoutError:
+                    logger.warning(f"注册工具 {tool.name} 超时，跳过")
+                    continue
                 except Exception as e:
                     logger.error(f"注册工具 {tool.name} 失败: {e}")
-                    import traceback
-                    traceback.print_exc()
+                    # 移除traceback打印，减少日志噪音
+                    continue
+
+            logger.info("实际MCP工具注册完成")
 
         except Exception as e:
             logger.error(f"动态注册工具失败: {e}")
-            import traceback
-            traceback.print_exc()
+            # 不要因为工具注册失败而阻止服务启动
 
         @self.server.tool()
         async def get_metrics() -> str:
@@ -436,7 +452,7 @@ class MCPSServer(BaseService):
                 metrics = {
                     "server_info": {
                         "name": "MCPS.ONE MCP Server",
-                        "version": get_unified_config().get("VERSION,"),
+                        "version": get_unified_config_manager().get("app.version", "1.0.0"),
                         "uptime_seconds": round(uptime, 2),
                         "start_time": datetime.fromtimestamp(self.start_time).isoformat()
                     },
@@ -453,8 +469,8 @@ class MCPSServer(BaseService):
                     },
                     "system_metrics": {
                         "last_health_check": datetime.fromtimestamp(self.last_health_check).isoformat(),
-                        "health_check_enabled": get_unified_config().get("HEALTH_CHECK_ENABLED,"),
-                        "metrics_enabled": get_unified_config().get("METRICS_ENABLED,"),
+                        "health_check_enabled": get_unified_config_manager().get("mcp.health_check.enabled", True),
+                        "metrics_enabled": get_unified_config_manager().get("mcp.metrics.enabled", True),
                     },
                     "timestamp": datetime.now().isoformat()
                 }
@@ -612,21 +628,84 @@ class MCPSServer(BaseService):
     async def run_stdio(self):
         """以 stdio 模式运行 MCP 服务端"""
         logger.info("启动 MCPS.ONE MCP 服务端 (stdio 模式)")
-        # 在异步上下文中使用 run_stdio_async
-        await self.server.run_stdio_async()
+        
+        try:
+            # 快速初始化，避免复杂的异步操作
+            if not self._initialized:
+                logger.info("快速初始化MCP服务端...")
+                # 简化初始化，只做必要的设置
+                if hasattr(self.mcp_service, 'initialize'):
+                    try:
+                        await asyncio.wait_for(self.mcp_service.initialize(), timeout=10.0)
+                    except asyncio.TimeoutError:
+                        logger.warning("MCP服务初始化超时，继续启动")
+                    except Exception as e:
+                        logger.warning(f"MCP服务初始化失败，继续启动: {e}")
+                self._initialized = True
+                
+            if not self._running:
+                logger.info("快速启动MCP服务端...")
+                # 简化启动，只做必要的设置
+                if hasattr(self.mcp_service, 'start'):
+                    try:
+                        await asyncio.wait_for(self.mcp_service.start(), timeout=10.0)
+                    except asyncio.TimeoutError:
+                        logger.warning("MCP服务启动超时，继续运行")
+                    except Exception as e:
+                        logger.warning(f"MCP服务启动失败，继续运行: {e}")
+                        
+                # 异步注册工具，不阻塞主流程
+                if not self._tools_registered:
+                    asyncio.create_task(self._register_actual_tools())
+                    self._tools_registered = True
+                    
+                self._running = True
+                
+            # 获取配置管理器中的横幅显示设置
+            config_manager = get_unified_config_manager()
+            show_banner = config_manager.get("mcp.server.show_banner", False)
+            
+            logger.info("开始运行stdio服务器...")
+            
+            # 使用正确的异步方法运行stdio服务器
+            # FastMCP 的 run_async 方法不接受 transport 参数
+            await self.server.run_stdio_async(show_banner=show_banner)
+            
+        except Exception as e:
+            logger.error(f"stdio服务器运行失败: {e}")
+            raise
+        finally:
+            logger.info("MCP服务端stdio模式已停止")
 
     async def run_http(self, host: str = "127.0.0.1", port: int = 8000):
         """Run the MCP server with HTTP transport"""
         try:
             logger.info(f"启动 MCPS.ONE MCP 服务端 (HTTP 模式) - {host}:{port}")
-            logger.info(f"配置信息: transport={get_unified_config().get('MCP_SERVER_TRANSPORT')}, log_level={get_unified_config().get('MCP_SERVER_LOG_LEVEL')}")
+            config_manager = get_unified_config_manager()
+            transport = config_manager.get('mcp.server.transport', 'stdio')
+            log_level = config_manager.get('mcp.server.log_level', 'INFO')
+            logger.info(f"配置信息: transport={transport}, log_level={log_level}")
 
             # 注意：run_streamable_http_async 不接受 host/port 参数
             # 它使用默认的 0.0.0.0:8000
             # 如果需要自定义 host/port，需要使用其他方法或配置
             logger.warning(f"注意：FastMCP run_streamable_http_async 使用默认配置 (0.0.0.0:8000)，忽略传入的 {host}:{port}")
 
-            await self.server.run_streamable_http_async()
+            # 添加超时和非阻塞处理
+            try:
+                # 使用 asyncio.wait_for 添加超时
+                await asyncio.wait_for(self.server.run_streamable_http_async(), timeout=30.0)
+            except asyncio.TimeoutError:
+                logger.warning("MCP HTTP服务启动超时，但服务可能已在后台运行")
+                # 不抛出异常，让服务继续运行
+                return
+            except Exception as e:
+                logger.error(f"MCP HTTP服务启动异常: {e}")
+                # 如果是连接相关错误，可能服务已经在运行
+                if "already in use" in str(e) or "Address already in use" in str(e):
+                    logger.warning("端口已被占用，MCP服务可能已在运行")
+                    return
+                raise
 
         except Exception as e:
             self.error_count += 1
@@ -637,9 +716,18 @@ class MCPSServer(BaseService):
     def run_sync_stdio(self):
         """同步方式运行 stdio 模式"""
         logger.info("启动 MCPS.ONE MCP 服务端 (stdio 模式)")
+        
+        # 简化初始化逻辑，直接同步调用
+        if not self._initialized:
+            logger.warning("服务未初始化，跳过初始化步骤")
+        if not self._running:
+            logger.warning("服务未启动，跳过启动步骤")
+        
         # 获取配置管理器中的横幅显示设置
         config_manager = get_unified_config_manager()
         show_banner = config_manager.get("mcp.server.show_banner", False)
+        
+        logger.info("开始运行stdio服务器...")
         self.server.run(transport="stdio", show_banner=show_banner)
 
     def run_sync_http(self, host: str = "127.0.0.1", port: int = 8001):

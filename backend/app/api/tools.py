@@ -409,7 +409,8 @@ async def start_tool(
             raise HTTPException(status_code=404, detail="工具不存在")
 
         # 检查工具是否可以启动
-        if not tool.can_start and not force:
+        # 对于状态为 RUNNING 的工具，让 MCP 服务层处理状态检查和清理
+        if not tool.can_start and not force and tool.status.value != "running":
             raise HTTPException(status_code=400, detail=f"工具无法启动: {tool.status.value}")
 
         # 启动工具

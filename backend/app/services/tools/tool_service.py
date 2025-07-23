@@ -351,8 +351,8 @@ class ToolService:
             if not tool:
                 raise ToolNotFoundError(f"工具不存在: {tool_id}")
 
-            # 检查工具是否可以启动
-            if not tool.can_start and not force:
+            # 检查工具是否可以启动（允许 running 状态继续处理以便状态同步）
+            if not tool.can_start and not force and tool.status.value != "running":
                 raise ToolValidationError(f"工具无法启动: {tool.name} (状态: {tool.status.value})")
 
             # 使用 MCP 服务启动工具

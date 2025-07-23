@@ -4,10 +4,11 @@
 import { api } from './utils'
 
 export interface ServiceStatus {
-  mode: 'proxy_only' | 'server_only' | 'both' | 'disabled'
+  mode: 'proxy_only' | 'server_only'
   is_running: boolean
   proxy_running: boolean
   server_running: boolean
+  api_running: boolean
   proxy_tools_count: number
   uptime: number
   last_error?: string

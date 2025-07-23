@@ -155,6 +155,7 @@ log_success "数据库初始化完成"
 
 # 启动后端服务（后台运行）
 log_info "启动后端服务..."
+export DISABLE_MCP_AUTO_START=true
 nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload > ../backend.log 2>&1 &
 BACKEND_PID=$!
 echo $BACKEND_PID > ../backend.pid
@@ -227,3 +228,4 @@ echo "  前端PID: $FRONTEND_PID (保存在 frontend.pid)"
 echo
 echo "停止服务请运行: ./stop.sh"
 echo
+tail

@@ -232,13 +232,13 @@ class CoreInfrastructureSetup:
 
         try:
             from app.core import (
-                get_unified_config, get_error_handler,
+                get_unified_config_manager, get_error_handler,
                 get_logging_manager, get_cache_manager
             )
 
             # 测试配置管理
-            config = get_unified_config()
-            app_name = config.get("app.name")
+            config_manager = get_unified_config_manager()
+            app_name = config_manager.get("app.name", "MCPS.ONE")
             print(f"  ✓ 配置管理: 应用名称 = {app_name}")
 
             # 测试错误处理

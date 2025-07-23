@@ -4,8 +4,7 @@ from app.core.database import Base
 from .tool import MCPTool, ToolCategory, ToolStatus, ToolType
 from .system import SystemConfig, SystemInfo
 from .log import SystemLog, OperationLog, MCPLog, LogLevel, LogCategory
-from .session import MCPSession, SessionStatus, SessionType
-from .task import MCPTask, TaskStatus, TaskType, TaskPriority
+# 会话和任务管理功能已移除
 from .proxy import MCPProxy, ProxyCategory, ProxyTestResult, ProxyStatus, ProxyType, ProxyProtocol
 from .user import User
 
@@ -33,15 +32,15 @@ __all__ = [
     "LogCategory",
 
     # 会话模型
-    "MCPSession",
-    "SessionStatus",
-    "SessionType",
+    # "MCPSession", # 会话管理功能已移除
+    # "SessionStatus", # 会话管理功能已移除
+    # "SessionType", # 会话管理功能已移除
 
-    # 任务模型
-    "MCPTask",
-    "TaskStatus",
-    "TaskType",
-    "TaskPriority",
+    # 任务模型 - 任务管理功能已移除
+    # "MCPTask", # 任务管理功能已移除
+    # "TaskStatus", # 任务管理功能已移除
+    # "TaskType", # 任务管理功能已移除
+    # "TaskPriority", # 任务管理功能已移除
 
     # 代理模型
     "MCPProxy",

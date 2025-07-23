@@ -17,9 +17,10 @@ def generate_id(length: int = 8) -> str:
     """生成随机ID"""
     return secrets.token_hex(length)
 
-def generate_session_id() -> str:
-    """生成会话ID"""
-    return f"session_{generate_id(16)}"
+# 会话管理功能已移除
+# def generate_session_id() -> str:
+#     """生成会话ID"""
+#     return f"session_{generate_id(16)}"
 
 def generate_message_id() -> str:
     """生成消息ID"""

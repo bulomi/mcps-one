@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import subprocess
 from typing import Dict, Any, Optional, List
 from enum import Enum
 from dataclasses import dataclass
@@ -30,8 +31,6 @@ class ServiceMode(Enum):
     """服务模式枚举"""
     PROXY_ONLY = "proxy"
     SERVER_ONLY = "server"
-    BOTH = "both"
-    DISABLED = "disabled"
 
 @dataclass
 class ServiceStatus:
@@ -39,6 +38,7 @@ class ServiceStatus:
     mode: ServiceMode
     proxy_running: bool = False
     server_running: bool = False
+    api_running: bool = False
     proxy_tools_count: int = 0
     server_connections: int = 0
     uptime: float = 0.0
@@ -53,10 +53,12 @@ class MCPUnifiedService(BaseService):
 
     def __init__(self):
         super().__init__("MCPUnifiedService")
-        self._mode = ServiceMode.DISABLED
+        self._mode = ServiceMode.SERVER_ONLY
         self._proxy_service: Optional[MCPService] = None
         self._proxy_server: Optional[MCPProxyServer] = None
         self._server_service: Optional[MCPSServer] = None
+
+        self._running = False
         self._start_time: Optional[float] = None
         self._lock = asyncio.Lock()
 
@@ -75,21 +77,20 @@ class MCPUnifiedService(BaseService):
         # 根据配置确定服务模式
         config_manager = get_unified_config_manager()
         enable_mcp_server = config_manager.get("mcp.server.enabled", False)
-        service_mode = config_manager.get("mcp.service.mode", "disabled")
+        service_mode = config_manager.get("mcp.service.mode", "server")
         
-        if enable_mcp_server and service_mode == "both":
-            self._mode = ServiceMode.BOTH
-        elif enable_mcp_server and service_mode == "server":
+        if enable_mcp_server or service_mode == "server":
             self._mode = ServiceMode.SERVER_ONLY
         elif service_mode == "proxy":
             self._mode = ServiceMode.PROXY_ONLY
         else:
-            self._mode = ServiceMode.DISABLED
+            # 默认使用服务端模式
+            self._mode = ServiceMode.SERVER_ONLY
 
         self.logger.info(f"服务模式设置为: {self._mode.value}")
 
         # 初始化代理服务
-        if self._mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
+        if self._mode == ServiceMode.PROXY_ONLY:
             self._proxy_service = MCPService()
             await self._proxy_service.initialize()
             self._proxy_server = MCPProxyServer()
@@ -97,7 +98,7 @@ class MCPUnifiedService(BaseService):
             self.logger.info("MCP代理服务已初始化")
 
         # 初始化服务端
-        if self._mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
+        if self._mode == ServiceMode.SERVER_ONLY:
             self._server_service = MCPSServer()
             self.logger.info("MCP服务端已初始化")
 
@@ -106,7 +107,7 @@ class MCPUnifiedService(BaseService):
         self.logger.info(f"启动MCP统一服务，模式: {self._mode.value}")
 
         # 启动代理服务
-        if self._mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
+        if self._mode == ServiceMode.PROXY_ONLY:
             if self._proxy_service and self._proxy_server:
                 await self._proxy_service.start()
                 await self._proxy_server.start()
@@ -115,7 +116,7 @@ class MCPUnifiedService(BaseService):
                 raise MCPServiceError("MCP代理服务未初始化")
 
         # 启动服务端
-        if self._mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
+        if self._mode == ServiceMode.SERVER_ONLY:
             if self._server_service:
                 await self._start_mcp_server()
                 self.logger.info("MCP服务端已启动")
@@ -135,6 +136,9 @@ class MCPUnifiedService(BaseService):
         # 停止服务端
         if self._server_service:
             await self._stop_mcp_server()
+        
+        # 停止API服务器
+
 
         self._start_time = None
 
@@ -158,7 +162,7 @@ class MCPUnifiedService(BaseService):
         """启动服务
 
         Args:
-            mode: 可选的服务模式覆盖 ("proxy", "server", "both")
+            mode: 可选的服务模式覆盖 ("proxy", "server")
         """
         async with self._lock:
             if self._running:
@@ -166,7 +170,7 @@ class MCPUnifiedService(BaseService):
                 return
 
             # 确保服务已初始化
-            if self._mode == ServiceMode.DISABLED:
+            if not hasattr(self, '_initialized') or not self._initialized:
                 logger.info("服务未初始化，正在初始化...")
                 await self.initialize()
 
@@ -182,7 +186,7 @@ class MCPUnifiedService(BaseService):
                 logger.info(f"启动MCP统一服务，模式: {self._mode.value}")
 
                 # 启动代理服务
-                if self._mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
+                if self._mode == ServiceMode.PROXY_ONLY:
                     if self._proxy_service and self._proxy_server:
                         await self._proxy_service.start()
                         await self._proxy_server.start()
@@ -191,12 +195,14 @@ class MCPUnifiedService(BaseService):
                         raise MCPServiceError("MCP代理服务未初始化")
 
                 # 启动服务端
-                if self._mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
+                if self._mode == ServiceMode.SERVER_ONLY:
                     if self._server_service:
                         await self._start_mcp_server()
                         logger.info("MCP服务端已启动")
                     else:
                         raise MCPServiceError("MCP服务端未初始化")
+                
+
 
                 self._running = True
                 self._start_time = asyncio.get_event_loop().time()
@@ -212,23 +218,24 @@ class MCPUnifiedService(BaseService):
 
     @error_handler
     async def stop_service(self, mode: Optional[str] = None) -> None:
-        """停止服务"
+        """停止服务
 
         Args:
-            mode: 可选的服务模式，指定要停止的服务 ("proxy", "server", "both")
+            mode: 可选的服务模式，指定要停止的服务 ("proxy", "server")
         """
         async with self._lock:
             if not self._running:
                 logger.warning("服务未在运行")
                 return
 
-            stop_mode = ServiceMode(mode) if mode else ServiceMode.BOTH
+            # 如果没有指定模式，则停止当前运行的模式
+            stop_mode = ServiceMode(mode) if mode else self._mode
 
             logger.info(f"停止MCP统一服务，模式: {stop_mode.value}")
 
             try:
                 # 停止代理服务
-                if stop_mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
+                if stop_mode == ServiceMode.PROXY_ONLY:
                     if self._proxy_service:
                         await self._proxy_service.stop()
                     if self._proxy_server:
@@ -236,15 +243,16 @@ class MCPUnifiedService(BaseService):
                     logger.info("MCP代理服务已停止")
 
                 # 停止服务端
-                if stop_mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
+                if stop_mode == ServiceMode.SERVER_ONLY:
                     if self._server_service:
                         await self._stop_mcp_server()
                         logger.info("MCP服务端已停止")
 
-                # 如果停止所有服务，更新运行状态
-                if stop_mode == ServiceMode.BOTH:
-                    self._running = False
-                    self._start_time = None
+
+
+                # 更新运行状态
+                self._running = False
+                self._start_time = None
 
                 logger.info("MCP统一服务停止完成")
 
@@ -254,7 +262,7 @@ class MCPUnifiedService(BaseService):
 
     @error_handler
     async def switch_mode(self, enable_server: bool, enable_proxy: bool) -> None:
-        """切换服务模式"
+        """切换服务模式
 
         Args:
             enable_server: 是否启用MCP服务端
@@ -262,14 +270,13 @@ class MCPUnifiedService(BaseService):
         """
         async with self._lock:
             # 确定新模式
-            if enable_server and enable_proxy:
-                new_mode = ServiceMode.BOTH
-            elif enable_server:
+            if enable_server:
                 new_mode = ServiceMode.SERVER_ONLY
             elif enable_proxy:
                 new_mode = ServiceMode.PROXY_ONLY
             else:
-                new_mode = ServiceMode.DISABLED
+                # 默认使用服务端模式
+                new_mode = ServiceMode.SERVER_ONLY
 
             if new_mode == self._mode:
                 logger.info(f"服务模式已经是 {new_mode.value}，无需切换")
@@ -292,7 +299,7 @@ class MCPUnifiedService(BaseService):
                 await self._reinitialize_services(old_mode, new_mode)
 
                 # 如果之前在运行，重新启动
-                if was_running and new_mode != ServiceMode.DISABLED:
+                if was_running:
                     await self.start_service()
 
                 logger.info(f"服务模式切换完成: {new_mode.value}")
@@ -318,6 +325,9 @@ class MCPUnifiedService(BaseService):
             status.server_running = hasattr(self._server_service, '_running') and self._server_service._running
             # TODO: 实现客户端连接数统计
             status.server_connections = 0
+
+        # API服务状态（当前服务是否在运行）
+        status.api_running = self._running
 
         # 运行时间
         if self._start_time:
@@ -374,7 +384,7 @@ class MCPUnifiedService(BaseService):
     @error_handler
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any],
                        source: str = "auto") -> Dict[str, Any]:
-        """调用工具"
+        """调用工具
 
         Args:
             tool_name: 工具名称
@@ -407,38 +417,99 @@ class MCPUnifiedService(BaseService):
         await self._server_service.start()
 
         # 根据配置选择传输方式并启动服务器
-        if get_unified_config().get("MCP_SERVER_TRANSPORT") == "stdio":
+        config_manager = get_unified_config_manager()
+        transport = config_manager.get("mcp.server.transport", "stdio")
+        
+        if transport == "stdio":
             logger.info("MCP服务端配置为stdio模式，启动stdio服务器")
             # 在后台任务中启动stdio服务器
             asyncio.create_task(self._run_stdio_server())
-        elif get_unified_config().get("MCP_SERVER_TRANSPORT") == "http":
-            logger.info(f"启动MCP服务端HTTP服务器: {get_unified_config().get('MCP_SERVER_HOST')}:{get_unified_config().get('MCP_SERVER_PORT')}")
+        elif transport == "http":
+            host = config_manager.get("mcp.server.host", "127.0.0.1")
+            port = config_manager.get("mcp.server.port", 8001)
+            logger.info(f"启动MCP服务端HTTP服务器: {host}:{port}")
             # 在后台任务中启动HTTP服务器
             asyncio.create_task(self._run_http_server())
 
     async def _run_stdio_server(self) -> None:
         """运行stdio服务器"""
         try:
-            # stdio模式需要在单独的线程中运行，因为它是阻塞的
+            logger.info("启动stdio服务器")
+            # 在独立线程中运行stdio服务器，避免阻塞FastAPI应用
             import threading
-            def run_stdio():
-                self._server_service.run_sync_stdio()
-
-            stdio_thread = threading.Thread(target=run_stdio, daemon=True)
-            stdio_thread.start()
-            logger.info("stdio服务器已在后台线程中启动")
+            import asyncio
+            
+            def run_in_thread():
+                # 创建新的事件循环
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # 在新的事件循环中运行stdio服务器
+                    loop.run_until_complete(self._server_service.run_stdio())
+                except Exception as e:
+                    logger.error(f"线程中的stdio服务器运行失败: {e}")
+                finally:
+                    loop.close()
+            
+            # 创建并启动线程
+            thread = threading.Thread(target=run_in_thread, daemon=True)
+            thread.start()
+            logger.info("stdio服务器已在独立线程中启动")
         except Exception as e:
-            logger.error(f"stdio服务器运行失败: {e}")
+            logger.error(f"stdio服务器启动失败: {e}")
 
     async def _run_http_server(self) -> None:
         """运行HTTP服务器"""
         try:
-            await self._server_service.run_http(
-                host=get_unified_config().get("MCP_SERVER_HOST"),
-                port=get_unified_config().get("MCP_SERVER_PORT")
-            )
+            config_manager = get_unified_config_manager()
+            host = config_manager.get("mcp.server.host", "127.0.0.1")
+            port = config_manager.get("mcp.server.port", 8001)
+            
+            # 在独立线程中运行HTTP服务器，避免阻塞FastAPI应用
+            import threading
+            import asyncio
+            
+            def run_in_thread():
+                # 创建新的事件循环
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    # 在新的事件循环中运行HTTP服务器，添加超时处理
+                    async def run_with_timeout():
+                        try:
+                            await asyncio.wait_for(
+                                self._server_service.run_http(host=host, port=port),
+                                timeout=60.0  # 60秒超时
+                            )
+                        except asyncio.TimeoutError:
+                            logger.warning("MCP HTTP服务器启动超时，但可能已在后台运行")
+                        except Exception as e:
+                            logger.error(f"MCP HTTP服务器运行异常: {e}")
+                            # 如果是端口占用，说明服务可能已经在运行
+                            if "already in use" in str(e) or "Address already in use" in str(e):
+                                logger.warning("端口已被占用，MCP服务可能已在运行")
+                            else:
+                                raise
+                    
+                    loop.run_until_complete(run_with_timeout())
+                except Exception as e:
+                    logger.error(f"线程中的HTTP服务器运行失败: {e}")
+                finally:
+                    loop.close()
+            
+            # 创建并启动线程
+            thread = threading.Thread(target=run_in_thread, daemon=True)
+            thread.start()
+            logger.info(f"HTTP服务器已在独立线程中启动: {host}:{port}")
+            
+            # 给线程一些时间启动
+            await asyncio.sleep(2.0)
+            logger.info("HTTP服务器启动完成")
+            
         except Exception as e:
-            logger.error(f"HTTP服务器运行失败: {e}")
+            logger.error(f"HTTP服务器启动失败: {e}")
+
+
 
     async def _stop_mcp_server(self) -> None:
         """停止MCP服务端"""
@@ -447,28 +518,28 @@ class MCPUnifiedService(BaseService):
 
         logger.info("停止MCP服务端")
         await self._server_service.stop()
+    
+
 
     async def _reinitialize_services(self, old_mode: ServiceMode, new_mode: ServiceMode) -> None:
         """重新初始化服务"""
         # 清理不需要的服务
-        if old_mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH] and \
-           new_mode not in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
+        if old_mode == ServiceMode.PROXY_ONLY and new_mode != ServiceMode.PROXY_ONLY:
             if self._proxy_service:
                 await self._proxy_service.cleanup()
                 self._proxy_service = None
 
-        if old_mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH] and \
-           new_mode not in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
+        if old_mode == ServiceMode.SERVER_ONLY and new_mode != ServiceMode.SERVER_ONLY:
             self._server_service = None
 
         # 初始化新需要的服务
-        if new_mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH] and not self._proxy_service:
+        if new_mode == ServiceMode.PROXY_ONLY and not self._proxy_service:
             self._proxy_service = MCPService()
             await self._proxy_service.initialize()
             self._proxy_server = MCPProxyServer()
             await self._proxy_server.initialize()
 
-        if new_mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH] and not self._server_service:
+        if new_mode == ServiceMode.SERVER_ONLY and not self._server_service:
             self._server_service = MCPSServer()
             await self._server_service.initialize()
 
@@ -530,6 +601,54 @@ class MCPUnifiedService(BaseService):
                 "cpu_usage": 0
             }
 
+    async def run_stdio(self) -> None:
+        """以stdio模式运行统一服务
+        
+        这个方法主要用于MCP客户端连接，会根据当前模式选择合适的stdio服务
+        """
+        logger.info(f"启动统一服务stdio模式，当前模式: {self._mode.value}")
+        
+        try:
+            # 确保服务已初始化
+            if not self._initialized:
+                await self.initialize()
+            
+            # 确保服务已启动
+            if not self._running:
+                await self.start_service()
+            
+            # 根据模式选择stdio服务
+            if self._mode == ServiceMode.SERVER_ONLY:
+                if self._server_service:
+                    logger.info("使用MCP服务端stdio模式")
+                    # 确保服务端已初始化
+                    if not self._server_service._initialized:
+                        await self._server_service.initialize()
+                    # 确保服务端已启动
+                    if not self._server_service._running:
+                        await self._server_service.start()
+                    # 使用异步方法运行stdio
+                    logger.info("调用异步stdio方法...")
+                    await self._server_service.run_stdio()
+                else:
+                    raise MCPServiceError("MCP服务端未初始化")
+            
+            elif self._mode == ServiceMode.PROXY_ONLY:
+                if self._proxy_server:
+                    logger.info("使用MCP代理stdio模式")
+                    await self._proxy_server.run_stdio()
+                else:
+                    raise MCPServiceError("MCP代理服务未初始化")
+            
+
+            
+            else:
+                raise MCPServiceError(f"模式 {self._mode.value} 不支持stdio")
+                
+        except Exception as e:
+            logger.error(f"stdio模式运行失败: {e}")
+            raise MCPServiceError(f"stdio模式运行失败: {e}")
+
     async def _cleanup_services(self) -> None:
         """清理服务资源"""
         try:
@@ -551,7 +670,8 @@ class MCPUnifiedService(BaseService):
         """生命周期上下文管理器"""
         try:
             await self.initialize()
-            if get_unified_config().get("MCP_AUTO_START") and self._mode != ServiceMode.DISABLED:
+            config_manager = get_unified_config_manager()
+            if config_manager.get("mcp.auto_start", False):
                 await self.start_service()
             yield self
         finally:

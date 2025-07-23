@@ -45,43 +45,7 @@ export interface PromptGetRequest {
   arguments?: Record<string, any>
 }
 
-// 代理会话创建请求
-export interface AgentSessionCreate {
-  name: string
-  description?: string
-  config: {
-    mode: 'single_tool' | 'multi_tool' | 'auto'
-    tools: string[]
-    max_iterations?: number
-    timeout?: number
-  }
-}
 
-// 代理任务执行请求
-export interface AgentExecuteRequest {
-  message: string
-  context?: Record<string, any>
-  tools?: string[]
-}
-
-// 任务结果
-export interface TaskResult {
-  task_id: string
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
-  result?: any
-  error?: string
-  steps: Array<{
-    step_id: string
-    tool_name: string
-    action: string
-    input: any
-    output?: any
-    error?: string
-    timestamp: string
-  }>
-  created_at: string
-  updated_at: string
-}
 
 // MCP代理服务API
 export const mcpApi = {
@@ -147,33 +111,7 @@ async readResource(toolName: string, request: ResourceReadRequest): Promise<{
     return response
   },
 
-  // 代理会话管理
-  async createSession(request: AgentSessionCreate): Promise<{
-    session_id: string
-    name: string
-    description?: string
-    config: any
-    status: string
-    created_at: string
-  }> {
-    const response = await api.post('/mcp-agent/sessions', request)
-    return response
-  },
 
-  async executeTask(sessionId: string, request: AgentExecuteRequest): Promise<{
-    task_id: string
-    session_id: string
-    status: string
-    message: string
-  }> {
-    const response = await api.post(`/mcp-agent/sessions/${sessionId}/execute`, request)
-    return response
-  },
-
-  async getTaskStatus(taskId: string): Promise<TaskResult> {
-    const response = await api.get(`/mcp-agent/tasks/${taskId}/status/`)
-    return response
-  },
 
   // 健康检查
   async healthCheck(): Promise<{
@@ -214,43 +152,7 @@ async readResource(toolName: string, request: ResourceReadRequest): Promise<{
     return response
   },
 
-  // 会话列表管理
-  async listSessions(params?: {
-    page?: number
-    size?: number
-    status?: string
-    session_type?: string
-    tool_id?: number
-    user_id?: string
-    search?: string
-  }): Promise<{
-     items: Array<{
-       id: number
-       session_id: string
-       name: string
-       description?: string
-       status: string
-       session_type: string
-       tool_id?: number
-       user_id?: string
-       config: any
-       metadata: any
-       request_count: number
-       response_count: number
-       error_count: number
-       created_at: string
-       updated_at: string
-       last_activity_at: string
-       expires_at?: string
-     }>
-     total: number
-     page: number
-     size: number
-     pages: number
-   }> {
-     const response = await api.get('/sessions/', { params })
-     return response
-   }
+
 }
 
 export default mcpApi

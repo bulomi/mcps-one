@@ -52,7 +52,7 @@ export class TimeoutError extends Error {
 }
 
 // API 基础配置
-const API_BASE_URL = '/api/v1';
+export const API_BASE_URL = '/api/v1';
 const DEFAULT_TIMEOUT = 10000;
 
 /**
@@ -116,9 +116,20 @@ const createRequest = async <T = any>(
   method: string,
   path: string,
   body?: any,
-  options: RequestInit = {}
+  options: RequestInit & { params?: Record<string, any> } = {}
 ): Promise<ApiResponse<T>> => {
-  const url = `${API_BASE_URL}${path}`;
+  let url = `${API_BASE_URL}${path}`;
+  
+  // 处理查询参数
+  if (options.params && Object.keys(options.params).length > 0) {
+    const searchParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+    url += `?${searchParams.toString()}`;
+  }
   
   // 检查是否是 FormData
   const isFormData = body instanceof FormData;
@@ -210,7 +221,7 @@ const createRequest = async <T = any>(
 
 // API 客户端
 export const api = {
-  get: async <T = any>(path: string, options?: RequestInit): Promise<ApiResponse<T>> => {
+  get: async <T = any>(path: string, options?: RequestInit & { params?: Record<string, any> }): Promise<ApiResponse<T>> => {
     return createRequest<T>('GET', path, undefined, options);
   },
   

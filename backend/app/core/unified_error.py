@@ -169,10 +169,11 @@ class ToolError(MCPSError):
     def __init__(self, message: str, **kwargs):
         super().__init__(message, category=ErrorCategory.TOOL, **kwargs)
 
-class SessionError(MCPSError):
-    """会话错误"""
-    def __init__(self, message: str, **kwargs):
-        super().__init__(message, category=ErrorCategory.SESSION, **kwargs)
+# 会话管理功能已移除
+# class SessionError(MCPSError):
+#     """会话相关错误"""
+#     def __init__(self, message: str, **kwargs):
+#         super().__init__(message, category=ErrorCategory.SESSION, **kwargs)
 
 class UserError(MCPSError):
     """用户错误"""

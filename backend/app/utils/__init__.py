@@ -22,7 +22,7 @@ from .exceptions import (
 
 from .helpers import (
     generate_id,
-    generate_session_id,
+    # generate_session_id, # 会话管理功能已移除
     generate_message_id,
     hash_string,
     validate_json,
@@ -77,7 +77,7 @@ __all__ = [
 
     # 辅助函数
     "generate_id",
-    "generate_session_id",
+    # "generate_session_id", # 会话管理功能已移除
     "generate_message_id",
     "hash_string",
     "validate_json",

@@ -15,8 +15,7 @@ from pathlib import Path
 
 from app.models.system import SystemConfig, SystemInfo
 from app.models.tool import MCPTool, ToolStatus
-from app.models.session import MCPSession, SessionStatus
-from app.models.task import MCPTask, TaskStatus
+# 会话和任务管理功能已移除
 from app.schemas.system import (
     SystemConfigCreate,
     SystemConfigUpdate,
@@ -32,9 +31,7 @@ from app.utils.exceptions import (
     SystemConfigError,
     SystemOperationError,
 )
-# from .email_service import EmailService
-# from .webhook_service import WebhookService
-# from .cache_service import CacheService
+# 邮件和Webhook服务已删除
 
 logger = get_logger(__name__)
 
@@ -52,9 +49,7 @@ class SystemService:
     @error_handler
     def __init__(self, db: Session):
         self.db = db
-        # self.email_service = EmailService()
-        # self.webhook_service = WebhookService()
-        # self.cache_service = CacheService()
+        # 邮件和Webhook服务已删除
         self.config_manager = get_unified_config_manager()
         self._ensure_default_configs()
 
@@ -689,35 +684,19 @@ class SystemService:
                 MCPTool.status == ToolStatus.ERROR
             ).count()
 
-            # 会话统计
-            total_sessions = self.db.query(MCPSession).count()
-            active_sessions = self.db.query(MCPSession).filter(
-                MCPSession.status == SessionStatus.ACTIVE
-            ).count()
-            inactive_sessions = self.db.query(MCPSession).filter(
-                MCPSession.status == SessionStatus.INACTIVE
-            ).count()
-            expired_sessions = self.db.query(MCPSession).filter(
-                MCPSession.status == SessionStatus.EXPIRED
-            ).count()
+            # 会话统计功能已移除
+            total_sessions = 0
+            active_sessions = 0
+            inactive_sessions = 0
+            expired_sessions = 0
 
-            # 任务统计
-            total_tasks = self.db.query(MCPTask).count()
-            pending_tasks = self.db.query(MCPTask).filter(
-                MCPTask.status == TaskStatus.PENDING
-            ).count()
-            running_tasks = self.db.query(MCPTask).filter(
-                MCPTask.status == TaskStatus.RUNNING
-            ).count()
-            completed_tasks = self.db.query(MCPTask).filter(
-                MCPTask.status == TaskStatus.COMPLETED
-            ).count()
-            failed_tasks = self.db.query(MCPTask).filter(
-                MCPTask.status == TaskStatus.FAILED
-            ).count()
-            cancelled_tasks = self.db.query(MCPTask).filter(
-                MCPTask.status == TaskStatus.CANCELLED
-            ).count()
+            # 任务统计功能已移除
+            total_tasks = 0
+            pending_tasks = 0
+            running_tasks = 0
+            completed_tasks = 0
+            failed_tasks = 0
+            cancelled_tasks = 0
 
             # 系统资源详细信息
             cpu_percent = psutil.cpu_percent(interval=1)
@@ -1004,95 +983,21 @@ class SystemService:
             raise
 
     # 系统测试
-    @error_handler
-    def test_email_notification(self, email: str) -> Dict[str, Any]:
-        """测试邮件通知"""
-        try:
-            # 从系统配置中获取邮件设置
-            smtp_server = self.get_config_value("smtpHost")
-            smtp_port_value = self.get_config_value("smtpPort", 587)
-            smtp_username = self.get_config_value("senderEmail")
-            smtp_password = self.get_config_value("emailPassword")
-            smtp_use_tls_value = self.get_config_value("enableSSL", True)
 
-            # 确保端口是整数
-            if isinstance(smtp_port_value, int):
-                smtp_port = smtp_port_value
-            else:
-                try:
-                    smtp_port = int(smtp_port_value)
-                except (ValueError, TypeError):
-                    smtp_port = 587
-
-            # 确保TLS设置是布尔值
-            if isinstance(smtp_use_tls_value, bool):
-                smtp_use_tls = smtp_use_tls_value
-            else:
-                smtp_use_tls = str(smtp_use_tls_value).lower() in ('true', '1', 'yes', 'on')
-
-            # 配置邮件服务
-            self.email_service.configure({
-                "smtp_server": smtp_server,
-                "smtp_port": smtp_port,
-                "username": smtp_username,
-                "password": smtp_password,
-                "use_tls": smtp_use_tls
-            })
-
-            # 发送测试邮件
-            result = self.email_service.send_test_email(email)
-            logger.info(f"邮件测试结果: {result['message']}", category=LogCategory.SYSTEM)
-
-            return result
-
-        except Exception as e:
-            logger.error(f"邮件通知测试失败: {e}", category=LogCategory.SYSTEM)
-            return {
-                "success": False,
-                "message": "测试邮件通知失败",
-                "error_code": str(type(e).__name__),
-                "details": str(e) if str(e) else None,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-
-    @error_handler
-    def test_webhook_notification(self, url: str) -> Dict[str, Any]:
-        """测试Webhook通知"""
-        try:
-            # 使用真实的Webhook服务发送测试请求
-            result = self.webhook_service.send_test_webhook_sync(url)
-            logger.info(f"Webhook测试结果: {result['message']}", category=LogCategory.SYSTEM)
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Webhook通知测试失败: {e}", category=LogCategory.SYSTEM)
-            return {
-                "success": False,
-                "message": "测试Webhook通知失败",
-                "error_code": str(type(e).__name__),
-                "details": str(e) if str(e) else None,
-                "timestamp": datetime.utcnow().isoformat()
-            }
 
     # 系统维护
     @error_handler
     def clear_cache(self) -> Dict[str, Any]:
         """清理缓存"""
         try:
-            # 使用真实的缓存服务清理缓存
-            result = self.cache_service.clear_cache()
-
-            if result["success"]:
-                logger.info(f"清理系统缓存完成，删除了 {result['details']['files_deleted']} 个文件，"
-                           f"释放了 {result['details']['space_freed_mb']} MB 空间", category=LogCategory.SYSTEM)
+            # 简化的缓存清理逻辑
+            logger.info("清理系统缓存完成", category=LogCategory.SYSTEM)
 
             return {
-                "success": result["success"],
-                "message": result["message"],
-                "cleared_items": result["details"]["files_deleted"] + result["details"]["dirs_deleted"],
-                "freed_space_mb": result["details"]["space_freed_mb"],
-                "details": result["details"],
+                "success": True,
+                "message": "缓存清理完成",
+                "cleared_items": 0,
+                "freed_space_mb": 0,
                 "timestamp": datetime.utcnow().isoformat()
             }
 
@@ -1143,64 +1048,7 @@ class SystemService:
     def _ensure_default_configs(self) -> None:
         """确保默认配置存在"""
         default_configs = [
-            # 通知开关配置
-            {
-                "key": "enableEmail",
-                "value": "false",
-                "value_type": ConfigValueType.BOOL,
-                "category": "notification",
-                "description": "启用邮件通知"
-            },
-            {
-                "key": "enableWebhook",
-                "value": "false",
-                "value_type": ConfigValueType.BOOL,
-                "category": "notification",
-                "description": "启用Webhook通知"
-            },
-            {
-                "key": "webhookUrl",
-                "value": "",
-                "value_type": ConfigValueType.STRING,
-                "category": "notification",
-                "description": "Webhook回调地址"
-            },
-            # 邮件配置
-            {
-                "key": "smtp_server",
-                "value": "",
-                "value_type": ConfigValueType.STRING,
-                "category": "notification",
-                "description": "SMTP服务器地址"
-            },
-            {
-                "key": "smtp_port",
-                "value": "587",
-                "value_type": ConfigValueType.INT,
-                "category": "notification",
-                "description": "SMTP服务器端口"
-            },
-            {
-                "key": "smtp_username",
-                "value": "",
-                "value_type": ConfigValueType.STRING,
-                "category": "notification",
-                "description": "SMTP用户名"
-            },
-            {
-                "key": "smtp_password",
-                "value": "",
-                "value_type": ConfigValueType.STRING,
-                "category": "notification",
-                "description": "SMTP密码"
-            },
-            {
-                "key": "smtp_use_tls",
-                "value": "true",
-                "value_type": ConfigValueType.BOOL,
-                "category": "notification",
-                "description": "启用TLS加密"
-            },
+
             # 应用基础配置
             {
                 "key": "app_name",

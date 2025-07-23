@@ -50,7 +50,7 @@ for /f "tokens=5" %%i in ('netstat -ano ^| findstr ":8000"') do (
     )
 )
 
-:: Stop 5173 port processes (Frontend)
+:: Stop 5173 port processes (Frontend) 
 for /f "tokens=5" %%i in ('netstat -ano ^| findstr ":5173"') do (
     if not "%%i"=="" (
         echo [Info] Stopping process occupying port 5173 (PID: %%i)

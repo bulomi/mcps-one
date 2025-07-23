@@ -191,6 +191,15 @@ export function formatLogLevel(level: string): string {
 }
 
 /**
+ * 格式化时间 - 兼容性函数
+ * @param timestamp - 时间戳或日期字符串
+ * @returns 格式化后的时间字符串
+ */
+export function formatTime(timestamp: string | Date | number): string {
+  return formatDateTime(timestamp, 'datetime')
+}
+
+/**
  * 格式化工具类型
  * @param type - 工具类型
  * @returns 格式化后的工具类型字符串

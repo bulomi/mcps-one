@@ -28,7 +28,6 @@ from app.services.system import SystemService
 
 from app.utils.response import success_response, error_response
 from app.utils.pagination import simple_paginate as paginate
-from app.utils.validators import validate_email_address, validate_webhook_url
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/system", tags=["系统管理"])
@@ -464,55 +463,7 @@ async def upload_logo(
 
 # 系统测试
 
-@router.post("/test/email", response_model=dict, summary="测试邮件通知")
-async def test_email_notification(
-    email: str = Query(..., description="测试邮箱地址"),
-    db: Session = Depends(get_db)
-):
-    """测试邮件通知"""
-    try:
-        # 验证邮箱格式
-        is_valid, error_msg = validate_email_address(email)
-        if not is_valid:
-            raise HTTPException(status_code=400, detail=error_msg)
-
-        system_service = SystemService(db)
-        result = system_service.test_email_notification(email.strip())
-
-        return success_response(
-            data=result,
-            message="邮件通知测试完成"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"测试邮件通知失败: {e}")
-        return error_response(message="测试邮件通知失败", error_code=str(e))
-
-@router.post("/test/webhook", response_model=dict, summary="测试Webhook通知")
-async def test_webhook_notification(
-    url: str = Query(..., description="Webhook URL"),
-    db: Session = Depends(get_db)
-):
-    """测试Webhook通知"""
-    try:
-        # 验证URL格式
-        is_valid, error_msg = validate_webhook_url(url)
-        if not is_valid:
-            raise HTTPException(status_code=400, detail=error_msg)
-
-        system_service = SystemService(db)
-        result = system_service.test_webhook_notification(url.strip())
-
-        return success_response(
-            data=result,
-            message="Webhook通知测试完成"
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"测试Webhook通知失败: {e}")
-        return error_response(message="测试Webhook通知失败", error_code=str(e))
+# 邮件和Webhook测试接口已删除
 
 # 系统维护
 @router.post("/cache/clear", response_model=dict, summary="清理缓存")

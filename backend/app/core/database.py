@@ -52,7 +52,8 @@ def get_db() -> Generator:
 def init_db():
     """初始化数据库"""
     # 导入所有模型以确保它们被注册
-    from app.models import tool, system, log, user, session, task, proxy
+    from app.models import tool, system, log, user, proxy
+    # from app.models import session, task  # 会话和任务管理功能已移除
 
     # 创建所有表
     Base.metadata.create_all(bind=engine)

@@ -9,6 +9,24 @@
         </div>
         <div class="header-right">
           <n-space>
+            <!-- MCP服务模式切换 -->
+            <n-dropdown 
+              :options="mcpModeOptions" 
+              @select="handleMcpModeChange"
+              trigger="click"
+              placement="bottom-end"
+            >
+              <n-button type="info" size="medium">
+                <template #icon>
+                  <n-icon><SettingsOutline /></n-icon>
+                </template>
+                {{ currentMcpModeLabel }}
+                <template #suffix>
+                  <n-icon><ChevronDownOutline /></n-icon>
+                </template>
+              </n-button>
+            </n-dropdown>
+            
             <n-button type="primary" @click="showAddModal = true">
               <template #icon>
                 <n-icon><AddOutline /></n-icon>
@@ -21,23 +39,6 @@
               </template>
               刷新
             </n-button>
-            <div class="dropdown-wrapper">
-              <n-dropdown 
-                trigger="click" 
-                :options="moreOptions" 
-                @select="handleMoreAction"
-                placement="bottom-end"
-                :show-arrow="true"
-                :to="false"
-              >
-                <n-button>
-                  <template #icon>
-                    <n-icon><EllipsisHorizontalOutline /></n-icon>
-                  </template>
-                  更多
-                </n-button>
-              </n-dropdown>
-            </div>
           </n-space>
         </div>
       </div>
@@ -77,43 +78,7 @@
       </n-grid-item>
     </n-grid>
 
-    <!-- 快速操作面板 -->
-    <n-card size="small" class="quick-actions-card" v-if="tools.length > 0">
-      <template #header>
-        <span>快速操作</span>
-      </template>
-      <n-space>
-        <n-button size="small" type="success" @click="startAllInactiveTools" :loading="quickActionLoading">
-          <template #icon>
-            <n-icon><PlayOutline /></n-icon>
-          </template>
-          启动所有停止的工具
-        </n-button>
-        <n-button size="small" type="warning" @click="stopAllActiveTools" :loading="quickActionLoading">
-          <template #icon>
-            <n-icon><StopOutline /></n-icon>
-          </template>
-          停止所有运行的工具
-        </n-button>
-        <n-button size="small" @click="restartAllActiveTools" :loading="quickActionLoading">
-          <template #icon>
-            <n-icon><RefreshOutline /></n-icon>
-          </template>
-          重启所有运行的工具
-        </n-button>
-        <n-popconfirm @positive-click="clearAllErrorTools">
-          <template #trigger>
-            <n-button size="small" type="error" :disabled="errorCount === 0">
-              <template #icon>
-                <n-icon><TrashOutline /></n-icon>
-              </template>
-              清理异常工具
-            </n-button>
-          </template>
-          确定要删除所有状态异常的工具吗？此操作不可撤销。
-        </n-popconfirm>
-      </n-space>
-    </n-card>
+
 
     <!-- 筛选和搜索 -->
     <n-card class="filter-card">
@@ -145,39 +110,7 @@
       </n-space>
     </n-card>
 
-    <!-- 批量操作栏 -->
-    <div v-if="selectedRowKeys.length > 0" class="batch-actions">
-      <n-space>
-        <span class="batch-info">已选择 {{ selectedRowKeys.length }} 个工具</span>
-        <n-button size="small" type="success" @click="batchAction('start')" :loading="batchLoading">
-          <template #icon>
-            <n-icon><PlayOutline /></n-icon>
-          </template>
-          批量启动
-        </n-button>
-        <n-button size="small" type="warning" @click="batchAction('stop')" :loading="batchLoading">
-          <template #icon>
-            <n-icon><StopOutline /></n-icon>
-          </template>
-          批量停止
-        </n-button>
-        <n-button size="small" @click="batchExport">
-          <template #icon>
-            <n-icon><DownloadOutline /></n-icon>
-          </template>
-          导出选中
-        </n-button>
-        <n-button size="small" type="error" @click="batchAction('delete')" :loading="batchLoading">
-          <template #icon>
-            <n-icon><TrashOutline /></n-icon>
-          </template>
-          批量删除
-        </n-button>
-        <n-button size="small" @click="selectedRowKeys = []">
-          取消选择
-        </n-button>
-      </n-space>
-    </div>
+
 
     <!-- 工具列表卡片 -->
     <n-card>
@@ -396,105 +329,7 @@
       </template>
     </n-modal>
 
-    <!-- 工具日志模态框 -->
-     <n-modal v-model:show="showLogModal" preset="dialog" :title="`${currentToolName} - 运行日志`" style="width: 90%; max-width: 1200px;">
-       <div style="height: 600px; overflow-y: auto;">
-         <div v-if="currentToolLogs && currentToolLogs.length > 0">
-           <!-- 日志过滤器 -->
-           <div style="margin-bottom: 16px; padding: 12px; background: #f5f5f5; border-radius: 6px;">
-             <n-space>
-               <n-select
-                 v-model:value="logLevelFilter"
-                 placeholder="选择日志级别"
-                 clearable
-                 style="width: 150px"
-                 :options="logLevelOptions"
-                 @update:value="filterLogs"
-               />
-               <n-input
-                 v-model:value="logSearchText"
-                 placeholder="搜索日志内容"
-                 clearable
-                 style="width: 200px"
-                 @input="filterLogs"
-               >
-                 <template #suffix>
-                   <n-icon><SearchOutline /></n-icon>
-                 </template>
-               </n-input>
-               <n-checkbox v-model:checked="showTimestamp" @update:checked="filterLogs">
-                 显示时间戳
-               </n-checkbox>
-             </n-space>
-           </div>
-           
-           <!-- 日志列表 -->
-           <div class="log-container">
-             <div 
-               v-for="log in filteredLogs" 
-               :key="log.id" 
-               :class="['log-entry', `log-${log.level?.toLowerCase() || 'info'}`]"
-             >
-               <div class="log-header">
-                 <n-tag 
-                   :type="getLogLevelType(log.level)"
-                   size="small"
-                   style="margin-right: 8px;"
-                 >
-                   {{ log.level || 'INFO' }}
-                 </n-tag>
-                 <span v-if="showTimestamp" class="log-timestamp">
-                   {{ formatLogTime(log.timestamp) }}
-                 </span>
-                 <span v-if="log.type" class="log-type">
-                   [{{ log.type }}]
-                 </span>
-               </div>
-               <div class="log-message">
-                 {{ log.message }}
-               </div>
-               <div v-if="log.details && Object.keys(log.details).length > 0" class="log-details">
-                 <n-collapse>
-                   <n-collapse-item title="详细信息" name="details">
-                     <n-code 
-                       :code="JSON.stringify(log.details, null, 2)" 
-                       language="json" 
-                       :show-line-numbers="false"
-                       style="max-height: 200px; overflow-y: auto;"
-                     />
-                   </n-collapse-item>
-                 </n-collapse>
-               </div>
-             </div>
-           </div>
-         </div>
-         <div v-else-if="logLoading" style="text-align: center; color: #888; padding: 50px;">
-           <n-spin size="medium" />
-           <div style="margin-top: 16px;">正在加载日志...</div>
-         </div>
-         <div v-else style="text-align: center; color: #888; padding: 50px;">
-           <n-icon size="48" style="color: #ccc;"><DocumentTextOutline /></n-icon>
-           <div style="margin-top: 16px;">暂无日志数据</div>
-         </div>
-       </div>
-       <template #action>
-         <n-space>
-           <n-button @click="refreshToolLogs" :loading="logLoading">
-             <template #icon>
-               <n-icon><RefreshOutline /></n-icon>
-             </template>
-             刷新日志
-           </n-button>
-           <n-button @click="clearToolLogs" type="warning">
-             <template #icon>
-               <n-icon><TrashOutline /></n-icon>
-             </template>
-             清空日志
-           </n-button>
-           <n-button @click="showLogModal = false">关闭</n-button>
-         </n-space>
-       </template>
-     </n-modal>
+
 
 
 
@@ -613,14 +448,10 @@ import {
   NFormItem,
   NDynamicTags,
   NPopconfirm,
-  NProgress,
   NGrid,
   NGridItem,
-  NDescriptions,
-  NDescriptionsItem,
   NTabs,
   NTabPane,
-  NInputGroup,
   NAlert,
   NStatistic,
   NRadioGroup,
@@ -639,388 +470,47 @@ import {
   StopOutline,
   TrashOutline,
   EditOutline,
-  EllipsisHorizontalOutline,
-  DownloadOutline,
-  CloudUploadOutline,
   CheckmarkCircleOutline,
-  DocumentTextOutline,
   InformationCircleOutline,
   SettingsOutline,
-  SearchOutline
+  SearchOutline,
+  ChevronDownOutline,
+  ExtensionPuzzleOutline,
+  BookOutline
 } from '@vicons/ionicons5'
 import { toolsApi, type Tool, type CreateToolRequest } from '../api/tools'
-import { ux } from '../utils/userExperience'
 import { handleApiError } from '../utils/errorHandler'
-import { logLevelOptions } from '../constants/logLevels'
-import { StatusMapper, RenderUtils, DataUtils, TimeUtils, FileUtils, ValidationUtils } from '../utils/common'
+import * as mcpUnifiedApi from '@/api/mcp-unified'
+import { NDropdown } from 'naive-ui'
 
 // 消息提示
 const message = useMessage()
 
 // 响应式数据
 const loading = ref(false)
-const batchLoading = ref(false)
-const quickActionLoading = ref(false)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const searchQuery = ref('')
 const selectedCategory = ref<string | null>(null)
 const selectedStatus = ref<string | null>(null)
 const editingTool = ref<Tool | null>(null)
-const selectedRowKeys = ref<number[]>([])
 const formRef = ref(null)
 
-// 日志查看相关
-const showLogModal = ref(false)
-const currentToolLogs = ref([])
-const currentToolName = ref('')
-const logLoading = ref(false)
-const logLevelFilter = ref(null)
-const logSearchText = ref('')
-const showTimestamp = ref(true)
-const filteredLogs = ref([])
+// MCP服务模式状态
+const currentMcpMode = ref('server') // 默认服务端模式
+const mcpModeLoading = ref(false)
 
-// 日志级别选项（使用统一常量）
-// const logLevelOptions 已从 '../constants/logLevels' 导入
 
-// 更多操作选项
-const moreOptions = [
-  {
-    label: '导出所有配置',
-    key: 'export',
-    icon: () => h(NIcon, null, { default: () => h(DownloadOutline) })
-  },
-  {
-    label: '导入配置',
-    key: 'import',
-    icon: () => h(NIcon, null, { default: () => h(CloudUploadOutline) })
-  },
-  {
-    label: '验证所有工具',
-    key: 'validate',
-    icon: () => h(NIcon, null, { default: () => h(CheckmarkCircleOutline) })
-  },
-  {
-    label: '刷新分类',
-    key: 'refresh-categories',
-    icon: () => h(NIcon, null, { default: () => h(RefreshOutline) })
-  }
-]
 
-// 处理更多操作
-const handleMoreAction = (key: string) => {
-  switch (key) {
-    case 'export':
-      exportConfig()
-      break
-    case 'import':
-      importConfig()
-      break
-    case 'validate':
-      validateAllTools()
-      break
-    case 'refresh-categories':
-      refreshCategories()
-      break
-  }
-}
 
-// 导出配置
-const exportConfig = async () => {
-  try {
-    loading.value = true
-    
-    // 使用后端API导出
-    const blob = await toolsApi.exportTools()
-    const filename = FileUtils.generateTimestampFilename('mcp-tools-config', 'json')
-    FileUtils.downloadFile(blob, filename)
-    
-    message.success('配置导出成功')
-  } catch (error) {
-    console.error('导出配置失败:', error)
-    // 降级到前端导出
-    try {
-      const config = {
-        tools: tools.value,
-        exportTime: new Date().toISOString(),
-        count: tools.value.length
-      }
-      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `mcp-tools-config-${new Date().toISOString().split('T')[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      message.success('配置导出成功（本地模式）')
-    } catch (fallbackError) {
-      message.error('导出失败')
-    }
-  } finally {
-    loading.value = false
-  }
-}
 
-// 导入配置
-const importConfig = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.json'
-  input.onchange = async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0]
-    if (!file) return
-    
-    try {
-      loading.value = true
-      const result = await toolsApi.importTools(file)
-      
-      if (result.success > 0) {
-        message.success(`成功导入 ${result.success} 个工具配置`)
-        if (result.failed > 0) {
-          message.warning(`${result.failed} 个工具导入失败`)
-          if (result.errors && result.errors.length > 0) {
-            console.warn('导入错误详情:', result.errors)
-          }
-        }
-        await refreshTools()
-      } else {
-        message.error('导入失败，没有成功导入任何工具')
-        if (result.errors && result.errors.length > 0) {
-          console.error('导入错误详情:', result.errors)
-        }
-      }
-    } catch (error) {
-      console.error('导入配置失败:', error)
-      message.error('导入失败，请检查文件格式或网络连接')
-    } finally {
-      loading.value = false
-    }
-  }
-  
-  // 验证工具配置
-  const validateConfig = async () => {
-    if (!editFormData.value.config_path) {
-      message.warning('请先输入配置文件路径')
-      return
-    }
-    
-    try {
-      configValidating.value = true
-      configValidationResult.value = null
-      
-      const result = await toolsApi.validateToolConfig(editFormData.value.config_path)
-      configValidationResult.value = result
-      
-      if (result.valid) {
-        message.success('配置验证通过')
-      } else {
-        message.error('配置验证失败')
-      }
-    } catch (error) {
-      console.error('配置验证失败:', error)
-      configValidationResult.value = {
-        valid: false,
-        errors: ['验证请求失败，请检查网络连接']
-      }
-      message.error('配置验证失败')
-    } finally {
-       configValidating.value = false
-     }
-   }
-   
-   // 快速操作：启动所有停止的工具
-   const startAllInactiveTools = async () => {
-     const inactiveTools = tools.value.filter(tool => 
-       tool.status === 'inactive' || tool.status === 'stopped'
-     )
-     
-     if (inactiveTools.length === 0) {
-       message.info('没有需要启动的工具')
-       return
-     }
-     
-     try {
-       quickActionLoading.value = true
-       const promises = inactiveTools.map(tool => toolsApi.startTool(tool.id))
-       await Promise.allSettled(promises)
-       
-       message.success(`已启动 ${inactiveTools.length} 个工具`)
-       await refreshTools()
-     } catch (error) {
-       console.error('批量启动失败:', error)
-       message.error('批量启动失败')
-     } finally {
-       quickActionLoading.value = false
-     }
-   }
-   
-   // 快速操作：停止所有运行的工具
-   const stopAllActiveTools = async () => {
-     const activeTools = tools.value.filter(tool => 
-       tool.status === 'active' || tool.status === 'running'
-     )
-     
-     if (activeTools.length === 0) {
-       message.info('没有需要停止的工具')
-       return
-     }
-     
-     try {
-       quickActionLoading.value = true
-       const promises = activeTools.map(tool => toolsApi.stopTool(tool.id))
-       await Promise.allSettled(promises)
-       
-       message.success(`已停止 ${activeTools.length} 个工具`)
-       await refreshTools()
-     } catch (error) {
-       console.error('批量停止失败:', error)
-       message.error('批量停止失败')
-     } finally {
-       quickActionLoading.value = false
-     }
-   }
-   
-   // 快速操作：重启所有运行的工具
-   const restartAllActiveTools = async () => {
-     const activeTools = tools.value.filter(tool => 
-       tool.status === 'active' || tool.status === 'running'
-     )
-     
-     if (activeTools.length === 0) {
-       message.info('没有需要重启的工具')
-       return
-     }
-     
-     try {
-       quickActionLoading.value = true
-       const promises = activeTools.map(tool => toolsApi.restartTool(tool.id))
-       await Promise.allSettled(promises)
-       
-       message.success(`已重启 ${activeTools.length} 个工具`)
-       await refreshTools()
-     } catch (error) {
-       console.error('批量重启失败:', error)
-       message.error('批量重启失败')
-     } finally {
-       quickActionLoading.value = false
-     }
-   }
-   
-   // 快速操作：清理所有异常工具
-   const clearAllErrorTools = async () => {
-     const errorTools = tools.value.filter(tool => tool.status === 'error')
-     
-     if (errorTools.length === 0) {
-       message.info('没有异常工具需要清理')
-       return
-     }
-     
-     try {
-       quickActionLoading.value = true
-       const promises = errorTools.map(tool => toolsApi.deleteTool(tool.id))
-       const results = await Promise.allSettled(promises)
-       
-       const successCount = results.filter(r => r.status === 'fulfilled').length
-       const failedCount = results.filter(r => r.status === 'rejected').length
-       
-       if (successCount > 0) {
-         message.success(`已清理 ${successCount} 个异常工具`)
-       }
-       if (failedCount > 0) {
-         message.warning(`${failedCount} 个工具清理失败`)
-       }
-       
-       await refreshTools()
-     } catch (error) {
-       console.error('清理异常工具失败:', error)
-       message.error('清理失败')
-     } finally {
-       quickActionLoading.value = false
-     }
-   }
-  input.click()
-}
 
-// 验证所有工具
-const validateAllTools = async () => {
-  try {
-    loading.value = true
-    
-    // 首先验证配置文件
-    const configValidationPromises = tools.value
-      .filter(tool => tool.config_path)
-      .map(async (tool) => {
-        try {
-          const result = await toolsApi.validateToolConfig(tool.config_path!)
-          return { tool, valid: result.valid, errors: result.errors }
-        } catch (error) {
-          return { tool, valid: false, errors: ['配置验证失败'] }
-        }
-      })
-    
-    const configResults = await Promise.allSettled(configValidationPromises)
-    
-    // 然后检查工具状态
-    const statusPromises = tools.value.map(async (tool) => {
-      try {
-        const result = await toolsApi.getToolStatus(tool.id)
-        return { tool, status: result.status, message: result.message }
-      } catch (error) {
-        return { tool, status: 'error', message: '状态检查失败' }
-      }
-    })
-    
-    const statusResults = await Promise.allSettled(statusPromises)
-    
-    let validCount = 0
-    let invalidCount = 0
-    let configErrors: string[] = []
-    
-    // 处理配置验证结果
-    configResults.forEach((result) => {
-      if (result.status === 'fulfilled') {
-        const { tool, valid, errors } = result.value
-        if (!valid && errors) {
-          configErrors.push(`${tool.name}: ${errors.join(', ')}`)
-        }
-      }
-    })
-    
-    // 处理状态检查结果
-    statusResults.forEach((result, index) => {
-      if (result.status === 'fulfilled') {
-        const { status } = result.value
-        tools.value[index].status = status
-        if (status === 'active' || status === 'running') {
-          validCount++
-        } else {
-          invalidCount++
-        }
-      } else {
-        tools.value[index].status = 'error'
-        invalidCount++
-      }
-    })
-    
-    // 显示验证结果
-    if (configErrors.length > 0) {
-      message.warning(`发现 ${configErrors.length} 个配置错误，请检查工具配置`)
-      console.warn('配置错误详情:', configErrors)
-    }
-    
-    message.success(`验证完成：${validCount} 个工具正常，${invalidCount} 个工具异常`)
-  } catch (error) {
-    console.error('验证工具失败:', error)
-    message.error('验证失败')
-  } finally {
-    loading.value = false
-  }
-}
+
+
 
 // 工具列表数据
 const tools = ref<Tool[]>([])
+const selectedRowKeys = ref<string[]>([])
 
 // 表单数据
 const formData = ref({
@@ -1098,16 +588,35 @@ const categoryOptions = ref([
 
 
 
-// 配置验证相关
-const configValidating = ref(false)
-const configValidationResult = ref<{ valid: boolean; errors?: string[] } | null>(null)
-
 // 状态选项
 const statusOptions = [
-  { label: '运行中', value: 'active' },
-  { label: '已停止', value: 'inactive' },
-  { label: '错误', value: 'error' }
+  { label: '运行中', value: 'running' },
+  { label: '已停止', value: 'stopped' },
+  { label: '启动中', value: 'starting' },
+  { label: '停止中', value: 'stopping' },
+  { label: '错误', value: 'error' },
+  { label: '未知', value: 'unknown' }
 ]
+
+// 辅助函数：判断工具是否正在运行
+const isToolRunning = (status: string) => {
+  return status === 'active' || status === 'running'
+}
+
+// 辅助函数：获取状态显示信息
+const getStatusDisplay = (status: string) => {
+  const statusMap = {
+    'active': { type: 'success', text: '运行中' },
+    'running': { type: 'success', text: '运行中' },
+    'inactive': { type: 'default', text: '已停止' },
+    'stopped': { type: 'default', text: '已停止' },
+    'starting': { type: 'warning', text: '启动中' },
+    'stopping': { type: 'warning', text: '停止中' },
+    'error': { type: 'error', text: '错误' },
+    'unknown': { type: 'error', text: '未知' }
+  }
+  return statusMap[status] || { type: 'default', text: status }
+}
 
 // 表格列定义
 const columns: DataTableColumns<Tool> = [
@@ -1118,10 +627,7 @@ const columns: DataTableColumns<Tool> = [
   {
     title: '工具名称',
     key: 'name',
-    width: 120,
-    render(row) {
-      return RenderUtils.renderToolName(row.name)
-    }
+    width: 120
   },
   {
     title: '描述',
@@ -1137,9 +643,6 @@ const columns: DataTableColumns<Tool> = [
     width: 250,
     ellipsis: {
       tooltip: true
-    },
-    render(row) {
-      return RenderUtils.renderCodeBlock(row.command || row.config_path || '')
     }
   },
   {
@@ -1147,7 +650,8 @@ const columns: DataTableColumns<Tool> = [
     key: 'status',
     width: 100,
     render(row) {
-      return RenderUtils.renderStatusTag(row.status, 'tool')
+      const status = getStatusDisplay(row.status)
+      return h(NTag, { type: status.type }, { default: () => status.text })
     }
   },
   {
@@ -1167,17 +671,22 @@ const columns: DataTableColumns<Tool> = [
     key: 'actions',
     width: 200,
     render(row) {
+      const isRunning = isToolRunning(row.status)
+      const isTransitioning = row.status === 'starting' || row.status === 'stopping'
+      
       return h(NSpace, { size: 'small' }, {
         default: () => [
           h(NButton, {
             size: 'small',
-            type: row.status === 'active' ? 'warning' : 'primary',
+            type: isRunning ? 'warning' : 'primary',
+            disabled: isTransitioning,
+            loading: isTransitioning,
             onClick: () => toggleToolStatus(row)
           }, {
             icon: () => h(NIcon, null, {
-              default: () => row.status === 'active' ? h(StopOutline) : h(PlayOutline)
+              default: () => isRunning ? h(StopOutline) : h(PlayOutline)
             }),
-            default: () => row.status === 'active' ? '停止' : '启动'
+            default: () => isRunning ? '停止' : '启动'
           }),
           h(NButton, {
             size: 'small',
@@ -1186,13 +695,6 @@ const columns: DataTableColumns<Tool> = [
             icon: () => h(NIcon, null, { default: () => h(SettingsOutline) }),
             default: () => '配置'
           }),
-          h(NButton, {
-             size: 'small',
-             onClick: () => viewToolLogs(row)
-           }, {
-             icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) }),
-             default: () => '日志'
-           }),
 
           h(NPopconfirm, {
             onPositiveClick: () => deleteTool(row.id)
@@ -1217,154 +719,15 @@ const pagination = {
   pageSize: 10
 }
 
-// 批量操作
-const batchAction = async (action: 'start' | 'stop' | 'delete') => {
-  if (selectedRowKeys.value.length === 0) {
-    ux.warning('请选择要操作的工具')
-    return
-  }
 
-  const actionText = action === 'start' ? '启动' : action === 'stop' ? '停止' : '删除'
-  
-  try {
-    batchLoading.value = true
-    
-    const selectedTools = selectedRowKeys.value.map(toolId => ({
-      id: toolId,
-      name: tools.value.find(t => t.id === toolId)?.name || `工具${toolId}`
-    }))
-
-    const results = await ux.executeBatchWithFeedback(
-      selectedTools,
-      async (tool) => {
-        switch (action) {
-          case 'start':
-            const startResult = await toolsApi.startTool(tool.id)
-            return { id: tool.id, success: true, result: startResult }
-          case 'stop':
-            const stopResult = await toolsApi.stopTool(tool.id)
-            return { id: tool.id, success: true, result: stopResult }
-          case 'delete':
-            await toolsApi.deleteTool(tool.id, true) // 使用强制删除
-            return { id: tool.id, success: true }
-          default:
-            throw new Error(`未知操作: ${action}`)
-        }
-      },
-      {
-        loadingMessage: `正在批量${actionText}工具...`,
-        successMessage: `批量${actionText}完成`,
-        errorMessage: `批量${actionText}失败`,
-        confirmMessage: undefined,
-        showProgress: true,
-        continueOnError: true
-      }
-    )
-    
-    // 更新本地数据
-    if (results.results.length > 0) {
-      const successIds = results.results
-        .filter(r => r && r.id)
-        .map(r => r.id)
-        
-      if (action === 'delete') {
-        tools.value = tools.value.filter(tool => !successIds.includes(tool.id))
-      } else {
-        tools.value.forEach(tool => {
-          if (successIds.includes(tool.id)) {
-            tool.status = action === 'start' ? 'active' : 'inactive'
-          }
-        })
-      }
-      selectedRowKeys.value = []
-    }
-    
-    // 显示操作摘要
-    ux.showOperationSummary(`批量${actionText}工具`, {
-      total: selectedTools.length,
-      success: results.results.length,
-      failed: results.errors.length
-    })
-    
-  } catch (error) {
-    console.error(`批量${actionText}失败:`, error)
-    ux.error(`批量${actionText}失败: ${error.message || error}`)
-  } finally {
-    batchLoading.value = false
-  }
- }
  
- // 刷新分类列表
- const refreshCategories = async () => {
-   await ux.executeWithFeedback(
-     async () => {
-       const response = await toolsApi.getCategories()
-       const categories = response.data || []
-       
-       // 更新分类选项，保留默认分类并添加从后端获取的分类
-       const defaultCategories = [
-         { label: '文件操作', value: 'file' },
-         { label: '数据库', value: 'database' },
-         { label: '网络请求', value: 'network' },
-         { label: '系统工具', value: 'system' },
-         { label: '其他', value: 'other' }
-       ]
-       
-       const dynamicCategories = categories
-         .filter(cat => !defaultCategories.some(def => def.value === cat))
-         .map(cat => ({ label: cat, value: cat }))
-       
-       categoryOptions.value = [...defaultCategories, ...dynamicCategories]
-       
-       return { count: categoryOptions.value.length }
-     },
-     {
-       loadingMessage: '正在刷新分类列表...',
-       successMessage: (result) => `已刷新分类列表，共 ${result.count} 个分类`,
-       errorMessage: '刷新分类失败'
-     }
-   )
- }
 
-// 批量导出选中工具
-const batchExport = async () => {
-  if (selectedRowKeys.value.length === 0) {
-    ux.warning('请选择要导出的工具')
-    return
-  }
 
-  await ux.executeWithFeedback(
-    async () => {
-      const selectedTools = tools.value.filter(tool => selectedRowKeys.value.includes(tool.id))
-      const config = {
-        tools: selectedTools,
-        exportTime: new Date().toISOString(),
-        count: selectedTools.length
-      }
-      
-      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `mcp-tools-selected-${new Date().toISOString().split('T')[0]}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-      
-      return { count: selectedTools.length }
-    },
-    {
-      loadingMessage: '正在导出工具配置...',
-      successMessage: (result) => `已导出 ${result.count} 个工具配置`,
-      errorMessage: '导出失败'
-    }
-  )
-}
+
 
 // 统计数据
 const runningCount = computed(() => {
-  return tools.value.filter(tool => tool.status === 'active' || tool.status === 'running').length
+  return tools.value.filter(tool => isToolRunning(tool.status)).length
 })
 
 const stoppedCount = computed(() => {
@@ -1372,8 +735,31 @@ const stoppedCount = computed(() => {
 })
 
 const errorCount = computed(() => {
-  return tools.value.filter(tool => tool.status === 'error').length
+  return tools.value.filter(tool => tool.status === 'error' || tool.status === 'unknown').length
 })
+
+// MCP模式标签
+const currentMcpModeLabel = computed(() => {
+  const modeLabels = {
+    'server': 'MCP服务模式',
+    'proxy': 'FastMCP代理'
+  }
+  return modeLabels[currentMcpMode.value] || 'MCP服务模式'
+})
+
+// MCP模式下拉选项
+const mcpModeOptions = computed(() => [
+  {
+    label: 'MCP服务模式',
+    key: 'server',
+    icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
+  },
+  {
+    label: 'FastMCP代理',
+    key: 'proxy',
+    icon: () => h(NIcon, null, { default: () => h(BookOutline) })
+  }
+])
 
 // 过滤后的工具列表
 const filteredTools = computed(() => {
@@ -1400,140 +786,120 @@ const filteredTools = computed(() => {
 // 刷新工具列表
 const refreshTools = async () => {
   try {
-    await ux.executeWithFeedback(
-      async () => {
-        const response = await toolsApi.getTools()
-        
-        // 使用通用数据处理工具
-        tools.value = DataUtils.normalizeApiResponse<Tool>(response)
-        
-        return { count: tools.value.length }
-      },
-      {
-        loadingMessage: '正在刷新工具列表...',
-        successMessage: `刷新成功，共 ${tools.value.length} 个工具`,
-        errorMessage: '刷新失败，请稍后重试'
-      }
-    )
+    loading.value = true
+    const response = await toolsApi.getTools()
+    // 后端返回的数据格式是 {items: [...], total: ..., page: ..., size: ...}
+    tools.value = response.data?.items || []
+    message.success(`刷新成功，共 ${tools.value.length} 个工具`)
   } catch (error) {
-    console.error('refreshTools执行失败:', error)
+    console.error('刷新工具列表失败:', error)
     tools.value = []
-    // 使用增强的错误处理，支持自动重试
-    handleApiError(error, '获取工具列表失败', undefined, true)
+    message.error('刷新失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
 }
 
 // 添加工具
 const handleAddTool = async () => {
-  await ux.executeWithFeedback(
-    async () => {
-      try {
-        // 表单验证
-        await formRef.value?.validate()
-        
-        const createData: CreateToolRequest = {
-          // ToolBase fields
-          name: formData.value.name,
-          display_name: formData.value.display_name,
-          description: formData.value.description || '',
-          type: 'custom',
-          category: formData.value.category || 'general',
-          tags: formData.value.tags || [],
-          
-          // ToolConfigBase fields
-          command: formData.value.command,
-          working_directory: formData.value.working_directory || '',
-          environment_variables: {},
-          connection_type: formData.value.connection_type,
-          host: formData.value.host || undefined,
-          port: formData.value.port || undefined,
-          path: formData.value.path || undefined,
-          auto_start: formData.value.auto_start,
-          restart_on_failure: formData.value.restart_on_failure,
-          max_restart_attempts: formData.value.max_restart_attempts,
-          timeout: formData.value.timeout,
-          
-          // ToolMetadata fields
-          version: formData.value.version || '1.0.0',
-          author: formData.value.author || '',
-          homepage: formData.value.homepage || '',
-          
-          // ToolCreate specific
-          enabled: formData.value.enabled
-        }
-        
-        const newTool = await toolsApi.createTool(createData)
-        
-        // 重置表单
-        showAddModal.value = false
-        formData.value = {
-          name: '',
-          display_name: '',
-          description: '',
-          category: '',
-          command: '',
-          working_directory: '',
-          connection_type: 'stdio',
-          host: '',
-          port: undefined,
-          path: '',
-          auto_start: false,
-          restart_on_failure: true,
-          max_restart_attempts: 3,
-          timeout: 30,
-          version: '',
-          author: '',
-          homepage: '',
-          enabled: true,
-          tags: []
-        }
-        
-        // 刷新工具列表
-        await refreshTools()
-        
-        return { toolName: formData.value.name }
-      } catch (error) {
-        // 使用增强的错误处理
-        handleApiError(error, '添加工具失败')
-        throw error
-      }
-    },
-    {
-      loadingMessage: '正在添加工具...',
-      successMessage: '工具添加成功，已自动注册到代理服务',
-      errorMessage: '添加工具失败，请检查输入信息'
+  try {
+    // 表单验证
+    await formRef.value?.validate()
+    
+    loading.value = true
+    
+    const createData: CreateToolRequest = {
+      // ToolBase fields
+      name: formData.value.name,
+      display_name: formData.value.display_name,
+      description: formData.value.description || '',
+      type: 'custom',
+      category: formData.value.category || 'general',
+      tags: formData.value.tags || [],
+      
+      // ToolConfigBase fields
+      command: formData.value.command,
+      working_directory: formData.value.working_directory || '',
+      environment_variables: {},
+      connection_type: formData.value.connection_type,
+      host: formData.value.host || undefined,
+      port: formData.value.port || undefined,
+      path: formData.value.path || undefined,
+      auto_start: formData.value.auto_start,
+      restart_on_failure: formData.value.restart_on_failure,
+      max_restart_attempts: formData.value.max_restart_attempts,
+      timeout: formData.value.timeout,
+      
+      // ToolMetadata fields
+      version: formData.value.version || '1.0.0',
+      author: formData.value.author || '',
+      homepage: formData.value.homepage || '',
+      
+      // ToolCreate specific
+      enabled: formData.value.enabled
     }
-  )
+    
+    await toolsApi.createTool(createData)
+    
+    // 重置表单
+    showAddModal.value = false
+    formData.value = {
+      name: '',
+      display_name: '',
+      description: '',
+      category: '',
+      command: '',
+      working_directory: '',
+      connection_type: 'stdio',
+      host: '',
+      port: undefined,
+      path: '',
+      auto_start: false,
+      restart_on_failure: true,
+      max_restart_attempts: 3,
+      timeout: 30,
+      version: '',
+      author: '',
+      homepage: '',
+      enabled: true,
+      tags: []
+    }
+    
+    message.success('工具添加成功')
+    await refreshTools()
+    
+  } catch (error) {
+    console.error('添加工具失败:', error)
+    message.error('添加工具失败，请检查输入信息')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 切换工具状态
 const toggleToolStatus = async (tool: Tool) => {
-  const isActive = tool.status === 'active'
-  const action = isActive ? '停止' : '启动'
+  const isRunning = isToolRunning(tool.status)
+  const action = isRunning ? '停止' : '启动'
   
-  await ux.executeWithFeedback(
-    async () => {
-      try {
-        if (isActive) {
-          await toolsApi.stopTool(tool.id)
-          tool.status = 'inactive'
-        } else {
-          await toolsApi.startTool(tool.id)
-          tool.status = 'active'
-        }
-        return { toolName: tool.name, action }
-      } catch (error) {
-        // 使用增强的错误处理，支持自动重试
-        handleApiError(error, `${action}工具失败`, undefined, true)
-        throw error
-      }
-    },
-    {
-      loadingMessage: `正在${action}工具...`,
-      successMessage: (result) => `工具 ${result.toolName} 已${result.action}`,
-      errorMessage: `${action}工具失败，请稍后重试`
+  try {
+    loading.value = true
+    
+    if (isRunning) {
+      await toolsApi.stopTool(tool.id)
+      message.success(`工具 ${tool.name} 停止请求已发送`)
+    } else {
+      await toolsApi.startTool(tool.id)
+      message.success(`工具 ${tool.name} 启动请求已发送`)
     }
-  )
+    
+    // 刷新工具列表以获取最新状态
+    await refreshTools()
+  } catch (error) {
+    console.error(`${action}工具失败:`, error)
+    message.error(`${action}工具失败，请稍后重试`)
+  } finally {
+    loading.value = false
+  }
 }
 
 // 编辑工具
@@ -1595,69 +961,62 @@ const cancelEditTool = () => {
 const handleUpdateTool = async () => {
   if (!editingTool.value) return
   
-  await ux.executeWithFeedback(
-    async () => {
-      try {
-        const updateData = {
-          name: editFormData.value.name,
-          display_name: editFormData.value.display_name,
-          description: editFormData.value.description,
-          type: 'mcp',
-          category: editFormData.value.category,
-          tags: editFormData.value.tags,
-          command: editFormData.value.command,
-          working_directory: editFormData.value.working_directory,
-          environment_variables: {},
-          connection_type: editFormData.value.connection_type,
-          host: editFormData.value.host,
-          port: editFormData.value.port,
-          path: editFormData.value.path,
-          auto_start: editFormData.value.auto_start,
-          restart_on_failure: editFormData.value.restart_on_failure,
-          max_restart_attempts: editFormData.value.max_restart_attempts,
-          timeout: editFormData.value.timeout,
-          version: editFormData.value.version,
-          author: editFormData.value.author,
-          homepage: editFormData.value.homepage,
-          enabled: editFormData.value.enabled
-        }
-        
-        const response = await toolsApi.updateTool(editingTool.value!.id, updateData)
-        
-        // 处理API响应数据结构
-        let updatedTool = response
-        if (response && typeof response === 'object' && 'data' in response) {
-          updatedTool = response.data
-        }
-        
-        // 更新本地数据
-        const index = tools.value.findIndex(t => t.id === editingTool.value!.id)
-        if (index > -1) {
-          // 确保更新的工具对象包含完整的字段，特别是id
-          tools.value[index] = {
-            ...tools.value[index], // 保留原有字段
-            ...updatedTool,        // 覆盖更新的字段
-            id: editingTool.value!.id // 确保id字段存在
-          }
-        }
-        
-        showEditModal.value = false
-        const toolName = editingTool.value!.name
-        editingTool.value = null
-        
-        return { toolName }
-      } catch (error) {
-        // 使用增强的错误处理
-        handleApiError(error, '更新工具失败')
-        throw error
-      }
-    },
-    {
-      loadingMessage: '正在更新工具...',
-      successMessage: (result) => `工具 ${result.toolName} 更新成功`,
-      errorMessage: '更新工具失败，请稍后重试'
+  try {
+    loading.value = true
+    
+    const updateData = {
+      name: editFormData.value.name,
+      display_name: editFormData.value.display_name,
+      description: editFormData.value.description,
+      type: 'mcp',
+      category: editFormData.value.category,
+      tags: editFormData.value.tags,
+      command: editFormData.value.command,
+      working_directory: editFormData.value.working_directory,
+      environment_variables: {},
+      connection_type: editFormData.value.connection_type,
+      host: editFormData.value.host,
+      port: editFormData.value.port,
+      path: editFormData.value.path,
+      auto_start: editFormData.value.auto_start,
+      restart_on_failure: editFormData.value.restart_on_failure,
+      max_restart_attempts: editFormData.value.max_restart_attempts,
+      timeout: editFormData.value.timeout,
+      version: editFormData.value.version,
+      author: editFormData.value.author,
+      homepage: editFormData.value.homepage,
+      enabled: editFormData.value.enabled
     }
-  )
+    
+    const response = await toolsApi.updateTool(editingTool.value.id, updateData)
+    
+    // 处理API响应数据结构
+    let updatedTool = response
+    if (response && typeof response === 'object' && 'data' in response) {
+      updatedTool = response.data
+    }
+    
+    // 更新本地数据
+    const index = tools.value.findIndex(t => t.id === editingTool.value!.id)
+    if (index > -1) {
+      tools.value[index] = {
+        ...tools.value[index],
+        ...updatedTool,
+        id: editingTool.value!.id
+      }
+    }
+    
+    showEditModal.value = false
+    const toolName = editingTool.value.name
+    editingTool.value = null
+    
+    message.success(`工具 ${toolName} 更新成功`)
+  } catch (error) {
+    console.error('更新工具失败:', error)
+    handleApiError(error, '更新工具失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 删除工具
@@ -1665,149 +1024,23 @@ const deleteTool = async (id: number) => {
   const tool = tools.value.find(t => t.id === id)
   if (!tool) return
   
-  await ux.executeWithFeedback(
-    async () => {
-      try {
-        await toolsApi.deleteTool(id)
-        const index = tools.value.findIndex(tool => tool.id === id)
-        if (index > -1) {
-          tools.value.splice(index, 1)
-        }
-        return { toolName: tool.name }
-      } catch (error) {
-        // 使用增强的错误处理
-        handleApiError(error, '删除工具失败')
-        throw error
-      }
-    },
-    {
-      loadingMessage: '正在删除工具...',
-      successMessage: (result) => `工具 ${result.toolName} 删除成功`,
-      errorMessage: '删除工具失败，请稍后重试'
-    }
-  )
-}
-
-// 查看工具日志
-const viewToolLogs = async (tool: Tool) => {
   try {
-    currentToolName.value = tool.name
-    showLogModal.value = true
-    logLoading.value = true
-    currentToolLogs.value = []
-    
-    const response = await toolsApi.getToolLogs(tool.id)
-    // 处理API响应数据结构
-    let logs = []
-    if (response.success && response.data && response.data.items) {
-      logs = response.data.items
-    } else if (response.data && Array.isArray(response.data)) {
-      logs = response.data
-    } else if (typeof response.data === 'string') {
-      try {
-        const parsedLogs = JSON.parse(response.data)
-        logs = Array.isArray(parsedLogs) ? parsedLogs : []
-      } catch {
-        // 如果不是JSON格式，创建一个简单的日志对象
-        logs = [{
-          id: Date.now(),
-          level: 'INFO',
-          message: response.data,
-          timestamp: new Date().toISOString(),
-          type: 'system'
-        }]
-      }
+    loading.value = true
+    await toolsApi.deleteTool(id)
+    const index = tools.value.findIndex(tool => tool.id === id)
+    if (index > -1) {
+      tools.value.splice(index, 1)
     }
-    
-    currentToolLogs.value = logs
-    
-    filterLogs()
+    message.success(`工具 ${tool.name} 删除成功`)
   } catch (error) {
-    console.error('获取工具日志失败:', error)
-    currentToolLogs.value = []
-    handleApiError(error, '获取日志失败')
+    console.error('删除工具失败:', error)
+    handleApiError(error, '删除工具失败')
   } finally {
-    logLoading.value = false
+    loading.value = false
   }
 }
 
-// 刷新工具日志
-const refreshToolLogs = async () => {
-  const tool = tools.value.find(t => t.name === currentToolName.value)
-  if (tool) {
-    await viewToolLogs(tool)
-  }
-}
 
-// 清空工具日志
-const clearToolLogs = async () => {
-  const tool = tools.value.find(t => t.name === currentToolName.value)
-  if (tool) {
-    try {
-      await toolsApi.clearToolLogs(tool.id)
-      currentToolLogs.value = []
-      filteredLogs.value = []
-      message.success('日志清空成功')
-    } catch (error) {
-      console.error('清空日志失败:', error)
-      message.error('清空日志失败')
-    }
-  }
-}
-
-// 过滤日志
-const filterLogs = () => {
-  let logs = [...currentToolLogs.value]
-  
-  // 按级别过滤
-  if (logLevelFilter.value) {
-    logs = logs.filter(log => log.level === logLevelFilter.value)
-  }
-  
-  // 按搜索文本过滤
-  if (logSearchText.value) {
-    const searchText = logSearchText.value.toLowerCase()
-    logs = logs.filter(log => 
-      log.message?.toLowerCase().includes(searchText) ||
-      log.type?.toLowerCase().includes(searchText)
-    )
-  }
-  
-  // 按时间排序（最新的在前）
-  logs.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
-  
-  filteredLogs.value = logs
-}
-
-// 获取日志级别类型
-const getLogLevelType = (level: string) => {
-  const levelMap = {
-    'DEBUG': 'info',
-    'INFO': 'success',
-    'WARNING': 'warning',
-    'ERROR': 'error',
-    'CRITICAL': 'error'
-  }
-  return levelMap[level] || 'default'
-}
-
-// 格式化日志时间
-const formatLogTime = (timestamp: string) => {
-  if (!timestamp) return ''
-  try {
-    const date = new Date(timestamp)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  } catch {
-    return timestamp
-  }
-}
 
 
 
@@ -1828,19 +1061,13 @@ const updateToolsStatus = async () => {
   try {
     const statusPromises = tools.value.map(async (tool) => {
       try {
-        // 检查工具ID是否有效
-        if (!ValidationUtils.isValidToolId(tool.id)) {
-          // 工具缺少有效的ID，跳过状态更新
+        if (!tool.id) {
           return { id: tool.id, status: 'error' as const }
         }
         
         const response = await toolsApi.getToolStatus(tool.id)
-        // 使用状态映射工具
-        const statusInfo = StatusMapper.mapToolStatus(response.data.status)
-        return { id: tool.id, status: statusInfo.frontendStatus }
+        return { id: tool.id, status: response.data?.status || 'error' }
       } catch (error) {
-        // 静默处理单个工具状态获取失败
-        // 获取工具状态失败，静默处理
         return { id: tool.id, status: 'error' as const }
       }
     })
@@ -1851,15 +1078,11 @@ const updateToolsStatus = async () => {
     statusResults.forEach(({ id, status }) => {
       const tool = tools.value.find(t => t.id === id)
       if (tool && tool.status !== status) {
-        const oldStatus = tool.status
         tool.status = status
-        // 工具状态已更新
       }
     })
   } catch (error) {
     console.error('更新工具状态失败:', error)
-    // 使用增强的错误处理，但不显示用户提示（后台任务）
-    handleApiError(error, '更新工具状态失败', undefined, false, false)
   }
 }
 
@@ -1879,10 +1102,59 @@ const stopStatusUpdate = () => {
   }
 }
 
+// MCP模式切换处理
+const handleMcpModeChange = async (mode: string) => {
+  if (mode === currentMcpMode.value) return
+  
+  try {
+    mcpModeLoading.value = true
+    
+    const enableServer = mode === 'server'
+    const enableProxy = mode === 'proxy'
+    
+    await mcpUnifiedApi.switchServiceMode({
+      enable_server: enableServer,
+      enable_proxy: enableProxy
+    })
+    
+    currentMcpMode.value = mode
+    message.success(`已切换到${currentMcpModeLabel.value}`)
+    
+    // 刷新工具列表
+    await refreshTools()
+  } catch (error) {
+    console.error('切换MCP模式失败:', error)
+    message.error('切换模式失败，请稍后重试')
+  } finally {
+    mcpModeLoading.value = false
+  }
+}
+
+// 获取MCP状态
+const fetchMcpStatus = async () => {
+  try {
+    const response = await mcpUnifiedApi.getServiceStatus()
+    const status = response.data
+    
+    if (status.proxy_service?.status === 'running' && status.server?.status === 'running') {
+      currentMcpMode.value = 'server' // 默认显示服务端模式
+    } else if (status.proxy_service?.status === 'running') {
+      currentMcpMode.value = 'proxy'
+    } else {
+      currentMcpMode.value = 'server'
+    }
+  } catch (error) {
+    console.error('获取MCP状态失败:', error)
+    currentMcpMode.value = 'server' // 默认值
+  }
+}
+
 // 初始化数据
 const init = async () => {
-  await refreshTools()
-  await refreshCategories()
+  await Promise.all([
+    refreshTools(),
+    fetchMcpStatus()
+  ])
 }
 
 // 组件挂载时初始化
@@ -1937,18 +1209,7 @@ onUnmounted(() => {
   border: none;
 }
 
-.quick-actions-card {
-  margin-bottom: 24px;
-  border: 1px dashed #d9d9d9;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 12px;
-}
 
-.quick-actions-card :deep(.n-card-header) {
-  padding-bottom: 8px;
-  font-weight: 600;
-  color: #2080f0;
-}
 
 .n-card {
   border-radius: 12px;
@@ -1975,19 +1236,7 @@ onUnmounted(() => {
   /* 移除悬浮动画效果 */
 }
 
-.batch-actions {
-  margin-top: 16px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
 
-.batch-info {
-  color: #495057;
-  font-weight: 500;
-  font-size: 14px;
-}
 
 /* 下拉菜单样式优化 */
 :deep(.n-dropdown) {
@@ -2033,125 +1282,5 @@ onUnmounted(() => {
   margin-top: 4px !important;
 }
 
-/* 日志显示样式 */
-.log-container {
-  max-height: 450px;
-  overflow-y: auto;
-  padding: 8px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e8e8e8;
-}
 
-.log-entry {
-  margin-bottom: 12px;
-  padding: 12px;
-  background: white;
-  border-radius: 6px;
-  border-left: 4px solid #d9d9d9;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-.log-entry:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-}
-
-.log-entry.log-debug {
-  border-left-color: #909399;
-}
-
-.log-entry.log-info {
-  border-left-color: #409eff;
-}
-
-.log-entry.log-warning {
-  border-left-color: #e6a23c;
-}
-
-.log-entry.log-error {
-  border-left-color: #f56c6c;
-}
-
-.log-entry.log-critical {
-  border-left-color: #f56c6c;
-  background: #fef0f0;
-}
-
-.log-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.log-timestamp {
-  color: #909399;
-  margin-right: 8px;
-  font-family: 'Courier New', monospace;
-}
-
-.log-type {
-  color: #606266;
-  font-weight: 500;
-}
-
-.log-message {
-  color: #303133;
-  line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
-  font-size: 14px;
-}
-
-.log-details {
-  margin-top: 8px;
-}
-
-.log-details :deep(.n-collapse) {
-  background: transparent;
-}
-
-.log-details :deep(.n-collapse-item__header) {
-  padding: 8px 0;
-  font-size: 12px;
-  color: #606266;
-}
-
-.log-details :deep(.n-collapse-item__content-wrapper) {
-  padding: 0;
-}
-
-.log-details :deep(.n-collapse-item__content-inner) {
-  padding: 8px 0;
-}
-
-/* 日志过滤器样式 */
-.log-container :deep(.n-select) {
-  background: white;
-}
-
-.log-container :deep(.n-input) {
-  background: white;
-}
-
-/* 滚动条样式 */
-.log-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.log-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.log-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.log-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 </style>

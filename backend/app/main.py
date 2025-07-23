@@ -93,12 +93,17 @@ async def lifespan(app: FastAPI):
         await unified_service.initialize()
         logger.info("MCP统一服务初始化完成")
 
-        # 根据配置自动启动MCP服务
-        if config_manager.get("mcp.auto_start", True) and unified_service.mode.value != "disabled":
+        # 根据配置和环境变量自动启动MCP服务
+        import os
+        disable_mcp_auto_start = os.getenv("DISABLE_MCP_AUTO_START", "false").lower() == "true"
+        
+        if not disable_mcp_auto_start and config_manager.get("mcp.auto_start", True):
             logger.info("自动启动MCP服务...")
             await unified_service.start_service()
             status = await unified_service.get_service_status()
             logger.info(f"MCP服务状态: 模式={status.mode.value}, 代理运行={status.proxy_running}, 服务端运行={status.server_running}")
+        else:
+            logger.info("MCP服务自动启动已禁用")
 
         logger.info(f"MCPS.ONE 后端服务启动成功，监听端口: {config_manager.get('server.port', 8000)}")
 
@@ -242,12 +247,22 @@ async def mcps_exception_handler(request: Request, exc: MCPSException):
 async def validation_exception_handler(request: Request, exc: ValidationError):
     """处理验证异常"""
     logger.warning(f"验证异常: {exc.message} - {request.url}")
+    
+    # 确保details可以JSON序列化
+    try:
+        details = exc.details if hasattr(exc, 'details') else {}
+        # 如果details不能序列化，转换为字符串
+        import json
+        json.dumps(details)
+    except (TypeError, ValueError):
+        details = str(exc.details) if hasattr(exc, 'details') else {}
+    
     return JSONResponse(
         status_code=400,
         content={
             "error": "VALIDATION_ERROR",
             "message": exc.message,
-            "details": exc.details
+            "details": details
         },
         media_type="application/json; charset=utf-8"
     )
@@ -296,15 +311,36 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError as PydanticValidationError
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def request_validation_exception_handler(request: Request, exc: RequestValidationError):
     """处理 FastAPI 请求验证错误"""
     logger.error(f"请求验证错误: {exc.errors()} - {request.url}")
+    
+    # 确保错误详情可以JSON序列化
+    try:
+        import json
+        details = exc.errors()
+        # 测试是否可以序列化
+        json.dumps(details)
+    except (TypeError, ValueError):
+        # 如果不能序列化，转换为安全的格式
+        details = []
+        for error in exc.errors():
+            safe_error = {
+                "type": str(error.get("type", "unknown")),
+                "loc": [str(loc) for loc in error.get("loc", [])],
+                "msg": str(error.get("msg", "Validation error")),
+                "input": str(error.get("input", ""))[:100]  # 限制输入长度
+            }
+            if "ctx" in error:
+                safe_error["ctx"] = str(error["ctx"])[:100]  # 限制上下文长度
+            details.append(safe_error)
+    
     return JSONResponse(
         status_code=422,
         content={
             "error": "VALIDATION_ERROR",
             "message": "请求参数验证失败",
-            "details": exc.errors()
+            "details": details
         },
         media_type="application/json; charset=utf-8"
     )

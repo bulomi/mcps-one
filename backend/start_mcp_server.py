@@ -86,11 +86,6 @@ async def main():
             log_message(f"关闭服务时发生错误: {e}")
 
 if __name__ == "__main__":
-    # 清空日志文件
-    log_file = os.path.join(backend_dir, 'cursor_mcp.log')
-    with open(log_file, 'w', encoding='utf-8') as f:
-        f.write("")
-
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

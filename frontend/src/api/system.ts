@@ -34,8 +34,8 @@ export interface SystemStats {
   timestamp: string;
   totalTools: number
   activeTools: number
-  totalSessions: number
-  activeSessions: number
+  // totalSessions: number // 会话管理功能已移除
+  // activeSessions: number // 会话管理功能已移除
   totalTasks: number
   completedTasks: number
   failedTasks: number
@@ -102,7 +102,7 @@ export interface SystemSettings {
     autoSave: boolean;
   };
   security: {
-    sessionTimeout: number;
+    // sessionTimeout: number; // 会话管理功能已移除
     maxLoginAttempts: number;
     passwordPolicy: {
       minLength: number;
@@ -307,8 +307,12 @@ export const systemApi = {
   },
 
   // 上传LOGO文件
-  uploadLogo: async (formData: FormData): Promise<{ success: boolean; message: string; data?: { url: string } }> => {
-    return await api.post('/system/upload/logo', formData);
+  uploadLogo: async (formData: FormData): Promise<ApiResponse<{ url: string }>> => {
+    try {
+      return await api.post<{ url: string }>('/system/upload/logo', formData);
+    } catch (error) {
+      throw new Error(handleApiError(error));
+    }
   },
 
 
@@ -340,15 +344,7 @@ export const systemApi = {
     return await api.delete(`/system/backups/${backupId}/`)
   },
 
-  // 测试邮件通知
-  testEmailNotification: async (email: string): Promise<{ success: boolean; message: string }> => {
-    return await api.post(`/system/test/email?email=${encodeURIComponent(email)}`)
-  },
-
-  // 测试Webhook通知
-  testWebhookNotification: async (url: string): Promise<{ success: boolean; message: string }> => {
-    return await api.post(`/system/test/webhook?url=${encodeURIComponent(url)}`)
-  },
+  // 邮件和Webhook测试方法已删除
 
   // 清理缓存
   clearCache: async (): Promise<{ success: boolean; message: string }> => {

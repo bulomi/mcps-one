@@ -33,9 +33,9 @@ from app.utils.error_handler import (
     RetryConfig, CircuitBreakerConfig, with_retry, handle_errors
 )
 from app.core.unified_cache import cached
-from app.utils.process_monitor import process_monitor, ProcessConfig, ProcessState
+# 进程监控功能已移除
 from app.utils.mcp_client import MCPClient
-from app.utils.process_manager import ProcessManager
+# 进程管理功能已移除
 from app.services.base.base_service import MCPBaseService
 
 logger = get_logger(__name__)
@@ -45,20 +45,12 @@ class MCPService(MCPBaseService):
 
     def __init__(self):
         super().__init__("MCP Service")
-        self.process_manager = ProcessManager()
         self.processes: Dict[int, subprocess.Popen] = {}  # tool_id -> Process
         self.clients: Dict[int, Any] = {}  # tool_id -> Client
 
-        # 配置进程监控器
-        self._setup_process_monitor()
+        # 进程监控功能已移除
 
-    @error_handler
-    def _setup_process_monitor(self):
-        """设置进程监控器"""
-        # 设置回调函数
-        process_monitor.on_process_crash = self._handle_process_crash
-        process_monitor.on_resource_limit_exceeded = self._handle_resource_limit_exceeded
-        process_monitor.on_process_restart = self._handle_process_restart
+    # 进程监控功能已移除
 
     @error_handler
     async def _handle_process_crash(self, tool_id: int, metrics):
@@ -93,7 +85,7 @@ class MCPService(MCPBaseService):
 
             if tool and tool.restart_on_failure:
                 # 尝试重启
-                restart_count = process_monitor.restart_counts.get(tool_id, 0)
+                restart_count = 0  # 进程监控功能已移除
                 if restart_count < tool.max_restart_attempts:
                     logger.info(f"自动重启崩溃的工具: {tool.name}", category=LogCategory.SYSTEM)
 
@@ -409,8 +401,7 @@ class MCPService(MCPBaseService):
             # 保存进程信息
             self.processes[tool_id] = process
 
-            # 注册到进程监控器
-            process_monitor.register_process(tool_id, process, tool.startup_command or "")
+            # 进程监控功能已移除
 
             # 创建 MCP 客户端
             client = await self._create_client_with_retry(tool, process)
@@ -513,8 +504,7 @@ class MCPService(MCPBaseService):
             # 停止进程
             success = await self._stop_process_with_retry(tool_id, force)
 
-            # 从进程监控器注销
-            process_monitor.unregister_process(tool_id)
+            # 进程监控功能已移除
 
             # 更新状态
             if success:
@@ -841,8 +831,7 @@ class MCPService(MCPBaseService):
 
             self._shutdown_event.set()
 
-            # 停止进程监控器
-            await process_monitor.shutdown()
+            # 进程监控功能已移除
 
             # 关闭所有客户端
             for tool_id, client in list(self.clients.items()):

@@ -99,7 +99,7 @@ if not exist "data\mcps.db" (
 
 :: Start backend
 echo Starting backend server...
-start "Backend" cmd /k "call "%~dp0backend\.venv\Scripts\activate.bat" && cd /d "%~dp0backend" && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+start "Backend" powershell -NoExit -Command "cd '%~dp0backend'; .venv\Scripts\activate.bat; $env:DISABLE_MCP_AUTO_START='true'; uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 
 :: Return to project root
 cd ..

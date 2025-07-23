@@ -79,8 +79,8 @@ class MCPTool(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), comment="更新时间")
 
     # 关联关系
-    sessions = relationship("MCPSession", back_populates="tool")
-    tasks = relationship("MCPTask", back_populates="tool")
+    # sessions = relationship("MCPSession", back_populates="tool") # 会话管理功能已移除
+    # tasks = relationship("MCPTask", back_populates="tool") # 任务管理功能已移除
 
     def __repr__(self):
         return f"<MCPTool(id={self.id}, name='{self.name}', status='{self.status}')>"

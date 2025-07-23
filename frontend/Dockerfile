@@ -22,7 +22,7 @@ COPY . .
 # 构建应用
 RUN npm run build
 
-# 暴露端口
+# 暴露端口 
 EXPOSE 5173
 
 # 健康检查

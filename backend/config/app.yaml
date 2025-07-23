@@ -1,154 +1,184 @@
-# MCPS.ONE 应用配置文件
-# 此文件定义了应用的核心配置，支持环境变量覆盖
-
-# 应用基础配置
 app:
-  name: "MCPS.ONE"
-  version: "1.0.0"
-  description: "MCP 工具管理平台"
+  description: MCP 工具管理平台
+  logo_url: ''
+  name: MCPS.ONE
   show_title: true
-  logo_url: ""
-  
-# 服务器配置
-server:
-  host: "0.0.0.0"
-  port: 8000
-  debug: false
-  uploads_dir: "./uploads"  # 文件上传目录
-  cors_origins:
-    - "http://localhost:3000"
-    - "http://localhost:5173"
-    - "http://localhost:5174"
-  allowed_hosts:
-    - "localhost"
-    - "127.0.0.1"
-
-# 数据库配置
+  version: 2.0.0
+data_management:
+  cleanup_schedule: 0 2 * * *
+  cleanup_strategy: auto
+  max_backup_files: 10
+  max_log_files: 100
+  retention_days: 30
 database:
-  url: "sqlite:///./data/mcps.db"
-  echo: false
   backup_enabled: true
-  backup_interval: "daily"
+  backup_interval: daily
   backup_retention_days: 30
-
-# 日志配置
+  echo: false
+  url: sqlite:///./data/mcps.db
+development:
+  debug_toolbar: false
+  hot_reload: true
+  mock_external_services: false
+  profiling: false
+features:
+  api_docs: true
+  auto_update: false
+  developer_mode: false
+  experimental_features: false
+  health_check: true
+  verbose_errors: false
+  websocket_enabled: true
+i18n:
+  default_language: zh-CN
+  supported_languages:
+  - zh-CN
+  - en-US
+  - ja-JP
+  timezone: Asia/Shanghai
 logging:
-  level: "INFO"
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  file: "./data/logs/app.log"
-  max_file_size: "10MB"
   backup_count: 5
   console_output: true
-
-# MCP 服务配置
+  file: ./data/logs/app.log
+  format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+  level: INFO
+  max_file_size: 10MB
 mcp:
-  # 基础配置
+  api:
+    capabilities:
+    - list_available_tools
+    - call_tool
+    - get_tool_capabilities
+    - start_tool
+    - stop_tool
+    - health_check
+    - get_metrics
+    - http_transport
+    - rest_api
+    - json_rpc
+    enabled: true
+    host: 127.0.0.1
+    port: 8002
+    startup_script: start_mcp_api_server.py
+    transport: http
+  client_config:
+    mcpServers:
+      mcps-one-server:
+        args:
+        - D:/project/MCPS.ONE/backend/start_dynamic_mcp.py
+        command: D:/project/MCPS.ONE/backend/.venv/Scripts/python.exe
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONPATH: D:/project/MCPS.ONE/backend
+  enabled: true
+  logs_dir: ./data/logs
   max_processes: 10
   process_timeout: 30
-  restart_delay: 5
-  tools_dir: "./data/tools"
-  logs_dir: "./data/logs"
-  
-  # 服务端配置
-  server:
-    enabled: true
-    transport: "stdio"  # stdio, http
-    host: "127.0.0.1"
-    port: 8001
-    log_level: "INFO"
-    show_banner: false
-    max_connections: 10
-    connection_timeout: 30
-    stateless_http: false
-  
-  # 代理配置
   proxy:
-    enabled: true
     auto_start: true
+    capabilities:
+    - list_available_tools
+    - call_tool
+    - session_isolation
+    - concurrent_safety
+    - transport_bridging
+    enable_metrics: true
+    enabled: false
     graceful_shutdown: true
-    tool_startup_timeout: 60
     health_check_interval: 30
     retry_count: 3
-    enable_metrics: true
-
-# 功能开关
-features:
-  developer_mode: false
-  api_docs: true
-  verbose_errors: false
-  experimental_features: false
-  auto_update: false
-  health_check: true
-  websocket_enabled: true
-
-# 通知配置
+    startup_script: start_mcp_proxy_server.py
+    tool_startup_timeout: 60
+  restart_delay: 5
+  server:
+    capabilities:
+    - list_available_tools
+    - call_tool
+    - get_tool_capabilities
+    - start_tool
+    - stop_tool
+    - health_check
+    - get_metrics
+    connection_timeout: 30
+    enabled: false
+    host: 127.0.0.1
+    log_level: INFO
+    max_connections: 10
+    port: 8001
+    show_banner: false
+    startup_script: start_mcp_server.py
+    stateless_http: false
+    transport: http
+  service:
+    auto_switch: false
+    config_check_interval: 5
+    graceful_shutdown_timeout: 30
+    mode: server
+    startup_script: start_dynamic_mcp.py
+  tools_dir: ./data/tools
+  unified:
+    capabilities:
+    - list_available_tools
+    - call_tool
+    - get_tool_capabilities
+    - start_tool
+    - stop_tool
+    - health_check
+    - get_metrics
+    - session_isolation
+    - concurrent_safety
+    - mode_switching
+    - dynamic_configuration
+    enabled: false
+    startup_script: start_dynamic_mcp.py
+monitoring:
+  alert_thresholds:
+    cpu_percent: 80
+    disk_percent: 90
+    error_rate: 5
+    memory_percent: 85
+  health_check_interval: 30
+  metrics_enabled: true
+  metrics_interval: 60
 notifications:
   email:
     enabled: false
-    smtp_host: ""
+    password: ''
+    sender_email: ''
+    smtp_host: ''
     smtp_port: 587
-    sender_email: ""
-    password: ""
     use_ssl: false
     use_tls: true
-  
   webhook:
     enabled: false
-    url: ""
-    timeout: 30
-    retry_count: 3
     events:
-      - "tool_error"
-      - "system_error"
-      - "backup_completed"
-
-# 安全配置
-security:
-  secret_key: "your-secret-key-change-in-production"
-  access_token_expire_minutes: 30
-  password_min_length: 8
-  max_login_attempts: 5
-  lockout_duration: 300  # 5分钟
-
-# 性能配置
+    - tool_error
+    - system_error
+    - backup_completed
+    retry_count: 3
+    timeout: 30
+    url: ''
 performance:
-  max_request_size: "10MB"
-  request_timeout: 30
-  worker_processes: 1
-  worker_connections: 1000
   keepalive_timeout: 65
-
-# 数据管理
-data_management:
-  retention_days: 30
-  cleanup_strategy: "auto"  # auto, manual, scheduled
-  cleanup_schedule: "0 2 * * *"  # 每天凌晨2点
-  max_log_files: 100
-  max_backup_files: 10
-
-# 监控配置
-monitoring:
-  metrics_enabled: true
-  metrics_interval: 60  # 秒
-  health_check_interval: 30  # 秒
-  alert_thresholds:
-    cpu_percent: 80
-    memory_percent: 85
-    disk_percent: 90
-    error_rate: 5  # 每分钟错误数
-
-# 国际化配置
-i18n:
-  default_language: "zh-CN"
-  supported_languages:
-    - "zh-CN"
-    - "en-US"
-    - "ja-JP"
-  timezone: "Asia/Shanghai"
-
-# 开发配置
-development:
-  hot_reload: true
-  debug_toolbar: false
-  profiling: false
-  mock_external_services: false
+  max_request_size: 10MB
+  request_timeout: 30
+  worker_connections: 1000
+  worker_processes: 1
+security:
+  access_token_expire_minutes: 30
+  lockout_duration: 300
+  max_login_attempts: 5
+  password_min_length: 8
+  secret_key: your-secret-key-change-in-production
+server:
+  allowed_hosts:
+  - localhost
+  - 127.0.0.1
+  cors_origins:
+  - http://localhost:3000
+  - http://localhost:5173
+  - http://localhost:5174
+  debug: false
+  host: 0.0.0.0
+  port: 8000
+  uploads_dir: ./uploads

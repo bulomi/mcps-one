@@ -28,11 +28,11 @@ class ServiceModeRequest(BaseModel):
 
 class ServiceStartRequest(BaseModel):
     """服务启动请求"""
-    mode: Optional[str] = Field(default=None, description="服务模式 (proxy, server, both)")
+    mode: Optional[str] = Field(default=None, description="服务模式 (proxy, server)")
 
 class ServiceStopRequest(BaseModel):
     """服务停止请求"""
-    mode: Optional[str] = Field(default=None, description="要停止的服务模式 (proxy, server, both)")
+    mode: Optional[str] = Field(default=None, description="要停止的服务模式 (proxy, server)")
 
 class ToolCallRequest(BaseModel):
     """工具调用请求"""
@@ -46,6 +46,7 @@ class ServiceStatusResponse(BaseModel):
     mode: str = Field(description="当前服务模式")
     proxy_running: bool = Field(description="代理服务是否运行")
     server_running: bool = Field(description="服务端是否运行")
+    api_running: bool = Field(description="API服务是否运行")
     proxy_tools_count: int = Field(description="代理工具数量")
     server_connections: int = Field(description="服务端连接数")
     uptime: float = Field(description="运行时间(秒)")
@@ -80,6 +81,7 @@ async def get_service_status():
             mode=status.mode.value,
             proxy_running=status.proxy_running,
             server_running=status.server_running,
+            api_running=status.api_running,
             proxy_tools_count=status.proxy_tools_count,
             server_connections=status.server_connections,
             uptime=status.uptime,
@@ -125,7 +127,7 @@ async def stop_service(request: ServiceStopRequest, background_tasks: Background
         return {
             "message": "服务停止请求已提交",
             "status": "stopping",
-            "mode": request.mode or "both"
+            "mode": request.mode or "server"
         }
     except MCPServiceError as e:
         logger.error(f"停止服务失败: {e}")
@@ -142,18 +144,18 @@ async def switch_service_mode(request: ServiceModeRequest, background_tasks: Bac
         background_tasks.add_task(
             unified_service.switch_mode,
             request.enable_server,
-            request.enable_proxy
+            request.enable_proxy,
+            False  # API模式已移除，始终为False
         )
 
         # 确定新模式
-        if request.enable_server and request.enable_proxy:
-            new_mode = "both"
-        elif request.enable_server:
+        if request.enable_server:
             new_mode = "server"
         elif request.enable_proxy:
             new_mode = "proxy"
         else:
-            new_mode = "disabled"
+            # 如果两个都不启用，默认启用服务端模式
+            new_mode = "server"
 
         return {
             "message": "服务模式切换请求已提交",
@@ -265,16 +267,15 @@ async def health_check():
         is_healthy = True
         health_issues = []
 
-        if unified_service.mode != ServiceMode.DISABLED:
-            if unified_service.mode in [ServiceMode.PROXY_ONLY, ServiceMode.BOTH]:
-                if not status.proxy_running:
-                    is_healthy = False
-                    health_issues.append("代理服务未运行")
+        if unified_service.mode == ServiceMode.PROXY_ONLY:
+            if not status.proxy_running:
+                is_healthy = False
+                health_issues.append("代理服务未运行")
 
-            if unified_service.mode in [ServiceMode.SERVER_ONLY, ServiceMode.BOTH]:
-                if not status.server_running:
-                    is_healthy = False
-                    health_issues.append("服务端未运行")
+        if unified_service.mode == ServiceMode.SERVER_ONLY:
+            if not status.server_running:
+                is_healthy = False
+                health_issues.append("服务端未运行")
 
         if status.last_error:
             is_healthy = False

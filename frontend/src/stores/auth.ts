@@ -103,7 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // 初始化认证状态
   const initAuth = async () => {
-    if (token.value) {
+    if (token.value && refreshToken.value) {
       try {
         await fetchCurrentUser()
       } catch (error) {
@@ -113,9 +113,14 @@ export const useAuthStore = defineStore('auth', () => {
           await fetchCurrentUser()
         } catch (refreshError) {
           // 刷新也失败，清除认证信息
+          console.warn('认证初始化失败，清除认证信息')
           await logout()
         }
       }
+    } else if (token.value || refreshToken.value) {
+      // 令牌不完整，清除所有认证信息
+      console.warn('令牌不完整，清除认证信息')
+      await logout()
     }
   }
 

@@ -9,8 +9,8 @@ export const BASE_PATHS = {
   TOOLS: '/tools',
   MCP_AGENT: '/mcp-agent',
   MCP_UNIFIED: '/mcp-unified',
-  SYSTEM: '/system',
-  SESSIONS: '/sessions'
+  SYSTEM: '/system'
+  // SESSIONS: '/sessions' // 会话管理功能已移除
 } as const
 
 // 认证相关API路径
@@ -52,8 +52,8 @@ export const MCP_AGENT_PATHS = {
   TOOL_PROMPTS: (toolName: string) => `${BASE_PATHS.MCP_AGENT}/tools/${toolName}/prompts/`,
   TOOL_PROMPT_GET: (toolName: string) => `${BASE_PATHS.MCP_AGENT}/tools/${toolName}/prompts/get/`,
   TOOL_STATUS: (toolName: string) => `${BASE_PATHS.MCP_AGENT}/tools/${toolName}/status/`,
-  SESSIONS: `${BASE_PATHS.MCP_AGENT}/sessions/`,
-  SESSION_EXECUTE: (sessionId: string) => `${BASE_PATHS.MCP_AGENT}/sessions/${sessionId}/execute/`
+  // SESSIONS: `${BASE_PATHS.MCP_AGENT}/sessions/`, // 会话管理功能已移除
+  // SESSION_EXECUTE: (sessionId: string) => `${BASE_PATHS.MCP_AGENT}/sessions/${sessionId}/execute/` // 会话管理功能已移除
 } as const
 
 // MCP统一服务API路径
@@ -82,20 +82,21 @@ export const SYSTEM_PATHS = {
 } as const
 
 // 会话管理API路径
-export const SESSIONS_PATHS = {
-  LIST: `${BASE_PATHS.SESSIONS}/`,
-  DETAIL: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
-  CREATE: `${BASE_PATHS.SESSIONS}/`,
-  UPDATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
-  DELETE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
-  ACTIVATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/activate/`,
-  DEACTIVATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/deactivate/`,
-  TERMINATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/terminate/`,
-  ACTIVITY: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/activity/`,
-  STATS: `${BASE_PATHS.SESSIONS}/stats/`,
-  RECENT: `${BASE_PATHS.SESSIONS}/recent/`,
-  CLEANUP: `${BASE_PATHS.SESSIONS}/cleanup/`
-} as const
+// 会话管理功能已移除
+// export const SESSIONS_PATHS = {
+//   LIST: `${BASE_PATHS.SESSIONS}/`,
+//   DETAIL: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
+//   CREATE: `${BASE_PATHS.SESSIONS}/`,
+//   UPDATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
+//   DELETE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/`,
+//   ACTIVATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/activate/`,
+//   DEACTIVATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/deactivate/`,
+//   TERMINATE: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/terminate/`,
+//   ACTIVITY: (sessionId: string) => `${BASE_PATHS.SESSIONS}/${sessionId}/activity/`,
+//   STATS: `${BASE_PATHS.SESSIONS}/stats/`,
+//   RECENT: `${BASE_PATHS.SESSIONS}/recent/`,
+//   CLEANUP: `${BASE_PATHS.SESSIONS}/cleanup/`
+// } as const
 
 // 路径验证函数
 export const validateApiPath = (path: string): string => {

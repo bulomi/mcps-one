@@ -14,7 +14,8 @@ from collections import defaultdict, deque
 from weakref import WeakSet
 
 from fastapi import WebSocket, WebSocketDisconnect
-from app.utils.exceptions import SessionError
+# from app.utils.exceptions import SessionError # 会话管理功能已移除
+from app.utils.exceptions import MCPSException
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +327,7 @@ class WebSocketManager:
     def subscribe(self, client_id: str, message_types: List[MessageType]):
         """订阅消息类型"""
         if client_id not in self.connections:
-            raise SessionError(f"客户端不存在: {client_id}")
+            raise MCPSException(f"客户端不存在: {client_id}")
 
         connection = self.connections[client_id]
 

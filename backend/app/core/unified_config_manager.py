@@ -156,6 +156,8 @@ class UnifiedConfigManager:
 
             # MCP配置
             'mcp.enabled': (True, ConfigType.BOOLEAN, '是否启用MCP服务'),
+            'mcp.server.enabled': (True, ConfigType.BOOLEAN, '是否启用MCP服务器'),
+            'mcp.service.mode': ('server', ConfigType.STRING, 'MCP服务模式'),
             'mcp.max_processes': (10, ConfigType.INTEGER, 'MCP最大进程数'),
             'mcp.process_timeout': (30, ConfigType.INTEGER, 'MCP进程超时时间'),
             'mcp.restart_delay': (5, ConfigType.INTEGER, 'MCP重启延迟'),
@@ -252,8 +254,19 @@ class UnifiedConfigManager:
 
     def _process_config_data(self, data: Dict[str, Any], source: ConfigSource, category: str) -> None:
         """处理配置数据"""
+        # 检查数据是否为空
+        if data is None:
+            logger.warning(f"配置数据为空，跳过处理 (source: {source.value}, category: {category})")
+            return
+            
+        if not isinstance(data, dict):
+            logger.warning(f"配置数据不是字典类型，跳过处理 (source: {source.value}, category: {category})")
+            return
+            
         def flatten_dict(d: Dict[str, Any], parent_key: str = '', sep: str = '.') -> Dict[str, Any]:
             items = []
+            if d is None:
+                return {}
             for k, v in d.items():
                 new_key = f"{parent_key}{sep}{k}" if parent_key else k
                 if isinstance(v, dict):

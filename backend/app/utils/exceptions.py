@@ -155,42 +155,43 @@ class ProcessManagementError(ProcessError):
     pass
 
 # 会话相关异常
-class SessionError(MCPSException):
-    """会话异常基类"""
-    pass
+# 会话管理功能已移除
+# class SessionError(MCPSException):
+#     """会话异常基类"""
+#     pass
+# 
+# class SessionNotFoundError(SessionError):
+#     """会话不存在异常"""
+#     pass
+# 
+# class SessionExpiredError(SessionError):
+#     """会话过期异常"""
+#     pass
+# 
+# class SessionOperationError(SessionError):
+#     """会话操作异常"""
+#     pass
 
-class SessionNotFoundError(SessionError):
-    """会话不存在异常"""
-    pass
-
-class SessionExpiredError(SessionError):
-    """会话过期异常"""
-    pass
-
-class SessionOperationError(SessionError):
-    """会话操作异常"""
-    pass
-
-# 任务相关异常
-class TaskError(MCPSException):
-    """任务异常基类"""
-    pass
-
-class TaskNotFoundError(TaskError):
-    """任务不存在异常"""
-    pass
-
-class TaskExecutionError(TaskError):
-    """任务执行异常"""
-    pass
-
-class TaskOperationError(TaskError):
-    """任务操作异常"""
-    pass
-
-class TaskTimeoutError(TaskError):
-    """任务超时异常"""
-    pass
+# 任务管理功能已移除
+# class TaskError(MCPSException):
+#     """任务异常基类"""
+#     pass
+# 
+# class TaskNotFoundError(TaskError):
+#     """任务不存在异常"""
+#     pass
+# 
+# class TaskExecutionError(TaskError):
+#     """任务执行异常"""
+#     pass
+# 
+# class TaskOperationError(TaskError):
+#     """任务操作异常"""
+#     pass
+# 
+# class TaskTimeoutError(TaskError):
+#     """任务超时异常"""
+#     pass
 
 class ServiceException(MCPSException):
     """服务异常"""

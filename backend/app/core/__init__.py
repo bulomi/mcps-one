@@ -30,7 +30,7 @@ from .unified_error import (
     ExternalAPIError,
     MCPError,
     ToolError,
-    SessionError,
+    # SessionError, # 会话管理功能已移除
     UserError,
     error_handler,
     error_context,
@@ -97,7 +97,7 @@ __all__ = [
     "ExternalAPIError",
     "MCPError",
     "ToolError",
-    "SessionError",
+    # "SessionError", # 会话管理功能已移除
     "UserError",
     "error_handler",
     "error_context",

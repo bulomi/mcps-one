@@ -1,19 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../components/Layout/MainLayout.vue'
-import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
-import TestView from '../views/TestView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {
-      path: '/test',
-      name: 'test',
-      component: TestView,
-      meta: { requiresAuth: false }
-    },
+
     {
       path: '/login',
       name: 'login',
@@ -22,87 +15,84 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/app'
+      redirect: '/tools'
     },
     {
       path: '/app',
+      redirect: '/tools'
+    },
+    {
+      path: '/tools',
+      name: 'tools',
       component: MainLayout,
       meta: { requiresAuth: true },
       children: [
         {
           path: '',
-          name: 'home',
-          component: HomeView,
-        },
-        {
-          path: '/tools',
-          name: 'tools',
           component: () => import('../views/ToolsView.vue'),
         },
+      ],
+    },
+    {
+      path: '/tutorial',
+      name: 'Tutorial',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
         {
-          path: '/proxy',
-          name: 'proxy',
-          redirect: '/proxy/sessions'
+          path: '',
+          component: () => import('../views/TutorialView.vue'),
         },
         {
-          path: '/proxy/sessions',
-          name: 'proxy-sessions',
-          component: () => import('../views/MCPAgentSessionView.vue'),
+          path: 'mcp-server',
+          name: 'McpServerTutorial',
+          component: () => import('../views/DocsView.vue'),
+          beforeEnter: (to, from, next) => {
+            to.query.doc = 'configuration.md'
+            next()
+          }
         },
         {
-          path: '/proxy/status',
-          name: 'proxy-status',
-          component: () => import('../views/ProxyStatusView.vue'),
+          path: 'tool-management',
+          name: 'ToolManagementTutorial',
+          component: () => import('../views/DocsView.vue'),
+          beforeEnter: (to, from, next) => {
+            to.query.doc = 'getting-started.md'
+            next()
+          }
         },
         {
-          path: '/tasks/monitor',
-          name: 'task-monitor',
-          component: () => import('../views/TaskMonitorView.vue'),
+          path: 'api-documentation',
+          name: 'ApiDocumentation',
+          component: () => import('../views/DocsView.vue'),
+          beforeEnter: (to, from, next) => {
+            to.query.doc = 'api-guide.md'
+            next()
+          }
         },
+      ],
+    },
+    {
+      path: '/docs',
+      name: 'docs',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
         {
-          path: '/proxy/auto-session',
-          name: 'auto-session',
-          component: () => import('../views/AutoSessionView.vue'),
+          path: '',
+          component: () => import('../views/DocsView.vue'),
         },
+      ],
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: MainLayout,
+      meta: { requiresAuth: true },
+      children: [
         {
-          path: '/proxy/mcp-proxy',
-          name: 'mcp-proxy',
-          component: () => import('../views/FastMCPProxyView.vue'),
-        },
-        {
-          path: '/logs',
-          name: 'logs',
-          component: () => import('../views/LogsView.vue'),
-        },
-        {
-          path: '/settings',
-          name: 'settings',
+          path: '',
           component: () => import('../views/SystemSettingsView.vue'),
-        },
-        {
-          path: '/system-settings',
-          name: 'system-settings',
-          component: () => import('../views/SystemSettingsView.vue'),
-        },
-        {
-          path: '/help',
-          name: 'help',
-          component: () => import('../views/HelpView.vue'),
-        },
-        {
-          path: '/tutorial/tools',
-          name: 'tutorial-tools',
-          component: () => import('../views/TutorialToolsView.vue'),
-        },
-        {
-          path: '/tutorial/proxy-mode',
-          name: 'tutorial-proxy-mode',
-          component: () => import('../views/TutorialProxyModeView.vue'),
-        },
-        {
-          path: '/tutorial/mcp-mode',
-          name: 'tutorial-mcp-mode',
-          component: () => import('../views/TutorialMcpModeView.vue'),
         },
       ],
     },

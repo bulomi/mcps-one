@@ -46,26 +46,6 @@
           </div>
           <div class="header-right">
             <n-space>
-              <!-- MCP服务模式切换 -->
-              <n-space align="center">
-                <n-dropdown 
-                  :options="mcpModeOptions" 
-                  @select="handleMcpModeChange"
-                  trigger="click"
-                  placement="bottom-end"
-                >
-                  <n-button type="primary" size="small">
-                    <template #icon>
-                      <n-icon><SettingsOutline /></n-icon>
-                    </template>
-                    {{ currentMcpModeLabel }}
-                    <template #suffix>
-                      <n-icon><ChevronDownOutline /></n-icon>
-                    </template>
-                  </n-button>
-                </n-dropdown>
-              </n-space>
-              
               <!-- 使用说明提示 -->
               <n-popover trigger="click" placement="bottom-end" :width="240">
                 <template #trigger>
@@ -78,22 +58,11 @@
                 <div class="help-content">
                   <h4>MCPS.ONE 使用指南</h4>
                   <div class="mode-description">
-                    <p><strong>双模式：</strong>同时启用代理和MCP服务</p>
-                    <p><strong>代理模式：</strong>仅启用代理服务</p>
-                    <p><strong>MCP服务：</strong>仅启用MCP服务</p>
-                    <p><strong>已禁用：</strong>关闭所有服务</p>
+                    <p><strong>MCP服务端模式：</strong>启用MCP工具服务端</p>
+                    <p><strong>代理模式：</strong>启用FastMCP代理服务</p>
                   </div>
                   <div class="tutorial-links">
                     <n-space vertical>
-                      <n-button text type="primary" @click="router.push('/tutorial/tools')">
-                        📚 工具管理教程
-                      </n-button>
-                      <n-button text type="primary" @click="router.push('/tutorial/proxy-mode')">
-                        🔄 代理模式教程
-                      </n-button>
-                      <n-button text type="primary" @click="router.push('/tutorial/mcp-mode')">
-                        ⚙️ MCP模式教程
-                      </n-button>
                       <n-button text type="info" @click="window.open('https://docs.mcps.one', '_blank')">
                         📖 查看详细文档
                       </n-button>
@@ -148,22 +117,20 @@ import {
   type MenuOption
 } from 'naive-ui'
 import {
-  HomeOutline,
   ExtensionPuzzleOutline,
-  ServerOutline,
-  DocumentTextOutline,
   PersonOutline,
   LogOutOutline,
   SettingsSharp,
-  WarningOutline,
-  ChevronDownOutline,
   HelpCircleOutline,
   SettingsOutline,
-  BookOutline
+  BookOutline,
+  ServerOutline,
+  GitNetworkOutline,
+  DocumentTextOutline
 } from '@vicons/ionicons5'
 import GlobalLoadingIndicator from '@/components/GlobalLoadingIndicator.vue'
 import EnhancedToast from '@/components/EnhancedToast.vue'
-import { getServiceStatus, switchServiceMode } from '@/api/mcp-unified'
+
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import logoImage from '@/assets/logo.png'
@@ -180,9 +147,7 @@ const collapsed = ref(false)
 // 菜单展开状态
 const expandedKeys = ref<string[]>([])
 
-// MCP服务模式状态
-const currentMcpMode = ref('both') // 默认双模式
-const mcpModeLoading = ref(false)
+
 
 // 当前激活的菜单项
 const activeKey = computed(() => route.name as string)
@@ -194,15 +159,12 @@ const handleExpandedKeysUpdate = (keys: string[]) => {
 
 // 根据当前路由更新展开状态
 const updateExpandedKeys = () => {
-  const currentKey = activeKey.value
-  const newExpandedKeys: string[] = []
-  
-  // 如果当前路由是代理服务的子菜单，展开代理服务菜单
-  if (['proxy-sessions', 'auto-session', 'mcp-proxy'].includes(currentKey)) {
-    newExpandedKeys.push('proxy')
+  const currentPath = route.path
+  if (currentPath.startsWith('/tutorial')) {
+    expandedKeys.value = ['tutorial']
+  } else {
+    expandedKeys.value = []
   }
-  
-  expandedKeys.value = newExpandedKeys
 }
 
 // 当前页面标题
@@ -224,75 +186,36 @@ const currentPageTitle = computed(() => {
   return menuItem?.label || '首页'
 })
 
-// MCP模式标签
-const currentMcpModeLabel = computed(() => {
-  const modeLabels = {
-    'both': '双模式',
-    'proxy': '代理模式',
-    'server': 'MCP模式'
-  }
-  return modeLabels[currentMcpMode.value] || '未知模式'
-})
 
-// MCP模式下拉选项
-const mcpModeOptions = computed(() => [
-  {
-    label: '双模式',
-    key: 'both',
-    icon: () => h(NIcon, null, { default: () => h(SettingsOutline) })
-  },
-  {
-    label: '代理模式',
-    key: 'proxy',
-    icon: () => h(NIcon, null, { default: () => h(ServerOutline) })
-  },
-  {
-    label: 'MCP模式',
-    key: 'server',
-    icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
-  }
-])
 
 // 菜单选项
 const menuOptions = ref<MenuOption[]>([
-  {
-    label: '首页',
-    key: 'home',
-    icon: () => h(NIcon, null, { default: () => h(HomeOutline) })
-  },
   {
     label: 'MCP 工具',
     key: 'tools',
     icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
   },
   {
-    label: '代理服务',
-    key: 'proxy',
-    icon: () => h(NIcon, null, { default: () => h(ServerOutline) }),
+    label: '使用教程',
+    key: 'tutorial',
+    icon: () => h(NIcon, null, { default: () => h(BookOutline) }),
     children: [
       {
-        label: '自动会话',
-        key: 'auto-session'
+              label: '快速开始',
+              key: '/tutorial/tool-management',
+              icon: () => h(NIcon, null, { default: () => h(ExtensionPuzzleOutline) })
+            },
+      {
+        label: '配置指南',
+        key: '/tutorial/mcp-server',
+        icon: () => h(NIcon, null, { default: () => h(ServerOutline) })
       },
       {
-        label: '高级模式',
-        key: 'proxy-sessions'
-      },
-      {
-        label: 'MCP代理管理',
-        key: 'mcp-proxy'
+        label: 'API 指南',
+        key: '/tutorial/api-documentation',
+        icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
       }
     ]
-  },
-  {
-    label: '任务监控',
-    key: 'task-monitor',
-    icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
-  },
-  {
-    label: '日志查看',
-    key: 'logs',
-    icon: () => h(NIcon, null, { default: () => h(DocumentTextOutline) })
   },
   {
     label: '系统设置',
@@ -332,97 +255,28 @@ const userOptions = computed(() => [
 const handleMenuSelect = (key: string) => {
   // 根据菜单项导航到对应页面
   switch (key) {
-    case 'home':
-      router.push('/')
-      break
     case 'tools':
       router.push('/tools')
       break
-    case 'proxy-sessions':
-      router.push('/proxy/sessions')
+    case 'tutorial':
+      router.push('/tutorial')
       break
-    case 'task-monitor':
-      router.push('/tasks/monitor')
+    case '/tutorial/mcp-server':
+      router.push('/tutorial/mcp-server')
       break
-    case 'auto-session':
-      router.push('/proxy/auto-session')
+    case '/tutorial/tool-management':
+      router.push('/tutorial/tool-management')
       break
-    case 'mcp-proxy':
-      router.push('/proxy/mcp-proxy')
-      break
-    case 'logs':
-      router.push('/logs')
+    case '/tutorial/api-documentation':
+      router.push('/tutorial/api-documentation')
       break
     case 'settings':
       router.push('/settings')
       break
-    case 'help':
-      router.push('/help')
-      break
   }
 }
 
-// 处理MCP模式切换
-const handleMcpModeChange = async (key: string) => {
-  if (key === currentMcpMode.value || mcpModeLoading.value) {
-    return
-  }
-  
-  mcpModeLoading.value = true
-  
-  try {
-    // 根据模式确定启用的服务
-    let enableServer = false
-    let enableProxy = false
-    
-    switch (key) {
-      case 'both':
-        enableServer = true
-        enableProxy = true
-        break
-      case 'server':
-        enableServer = true
-        enableProxy = false
-        break
-      case 'proxy':
-        enableServer = false
-        enableProxy = true
-        break
-    }
-    
-    // 调用API切换模式
-    const result = await switchServiceMode({
-      enable_server: enableServer,
-      enable_proxy: enableProxy
-    })
-    currentMcpMode.value = key
-    
-    // 显示成功消息
-    window.$message?.success(`已切换到${currentMcpModeLabel.value}`)
-    
-  } catch (error) {
-    console.error('切换MCP模式失败:', error)
-    window.$message?.error(`切换模式失败: ${error.message}`)
-  } finally {
-    mcpModeLoading.value = false
-  }
-}
 
-// 获取当前MCP服务状态
-const fetchMcpStatus = async () => {
-  try {
-    const status = await getServiceStatus()
-    // 映射后端返回的mode值到前端的key
-    const modeMapping = {
-      'proxy': 'proxy',
-      'server': 'server', 
-      'both': 'both'
-    }
-    currentMcpMode.value = modeMapping[status.mode] || 'both'
-  } catch (error) {
-    console.error('获取MCP状态失败:', error)
-  }
-}
 
 // 处理用户操作
 const handleUserAction = async (key: string) => {
@@ -451,7 +305,6 @@ watch(() => route.name, () => {
 // 组件挂载时获取当前状态
 onMounted(async () => {
   await appStore.initializeApp()
-  fetchMcpStatus()
   updateExpandedKeys()
 })
 </script>

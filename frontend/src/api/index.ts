@@ -11,7 +11,7 @@ export * from './constants';
 export { authApi } from './auth';
 export { toolsApi } from './tools';
 export { systemApi } from './system';
-export { sessionsApi } from './sessions';
+// 会话管理功能已移除
 export { mcpApi } from './mcp';
 export { mcpAgentApi } from './mcp-agent';
 export { mcpUnifiedApi } from './mcp-unified';
@@ -20,7 +20,7 @@ export { mcpUnifiedApi } from './mcp-unified';
 export type { LoginRequest, LoginResponse, User } from './auth';
 export type { Tool, CreateToolRequest, ToolStatus, ToolStats } from './tools';
 export type { SystemStats, LogEntry, ConfigItem, SystemSettings } from './system';
-export type { Session, CreateSessionRequest } from './sessions';
+// 会话管理功能已移除
 
 // 兼容性导出（保持向后兼容）
 import { api } from './utils';
