@@ -83,13 +83,93 @@ docker-compose down
 
 ### MCP客户端配置
 
-如需将MCPS.ONE作为MCP服务器集成到其他MCP客户端（如Claude Desktop）中，请参考：
+## 🖥️ Windows平台配置
 
-- **MCP客户端配置**: [docs/mcp-client-config.md](docs/mcp-client-config.md)
-- 支持Windows和macOS平台
-- 提供详细的配置示例和步骤说明
+### 基本配置
 
-详细配置说明请参考 [配置指南](docs/configuration.md)
+```json
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "/path/to/your/project/mcps-one/backend/.venv/Scripts/python.exe",
+      "args": ["/path/to/your/project/mcps-one/backend/start_dynamic_mcp.py"],
+      "env": {
+        "PYTHONPATH": "/path/to/your/project/mcps-one/backend",
+        "PYTHONIOENCODING": "utf-8",
+        "MCP_SERVER_MODE": "server"
+      }
+    }
+  }
+}
+```
+
+### PowerShell路径配置
+
+如果使用PowerShell风格的路径：
+
+```json
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "C:\\path\\to\\your\\project\\mcps-one\\backend\\.venv\\Scripts\\python.exe",
+      "args": ["C:\\path\\to\\your\\project\\mcps-one\\backend\\start_dynamic_mcp.py"],
+      "env": {
+        "PYTHONPATH": "C:\\path\\to\\your\\project\\mcps-one\\backend",
+        "PYTHONIOENCODING": "utf-8",
+        "MCP_SERVER_MODE": "server"
+      }
+    }
+  }
+}
+```
+
+## 🍎 macOS平台配置
+
+### 基本配置
+
+```json
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "/Users/your-username/path/to/mcps-one/backend/.venv/bin/python",
+      "args": ["/Users/your-username/path/to/mcps-one/backend/start_dynamic_mcp.py"],
+      "env": {
+        "PYTHONPATH": "/Users/your-username/path/to/mcps-one/backend",
+        "PYTHONIOENCODING": "utf-8",
+        "MCP_SERVER_MODE": "server"
+      }
+    }
+  }
+}
+```
+
+### 使用相对路径（推荐）
+
+```json
+{
+  "mcpServers": {
+    "mcps-one": {
+      "command": "~/path/to/mcps-one/backend/.venv/bin/python",
+      "args": ["~/path/to/mcps-one/backend/start_dynamic_mcp.py"],
+      "env": {
+        "PYTHONPATH": "~/path/to/mcps-one/backend",
+        "PYTHONIOENCODING": "utf-8",
+        "MCP_SERVER_MODE": "server"
+      }
+    }
+  }
+}
+```
+
+## 🔧 配置参数说明
+
+| 参数 | 说明 | 必需 |
+|------|------|------|
+| `command` | Python解释器路径 | ✅ |
+| `args` | MCP服务器启动脚本路径 | ✅ |
+| `PYTHONPATH` | Python模块搜索路径 | ✅ |
+| `PYTHONIOENCODING` | Python I/O编码设置 | ✅ |
+| `MCP_SERVER_MODE` | MCP服务器运行模式，`server`（默认）、`proxy` | 可选 |
 
 
 ## 📚 相关文档
@@ -97,7 +177,6 @@ docker-compose down
 - **API 文档**: http://localhost:8000/docs
 - **Docker 部署**: [DOCKER.md](DOCKER.md)
 - **配置指南**: [docs/configuration.md](docs/configuration.md)
-- **MCP客户端配置**: [docs/mcp-client-config.md](docs/mcp-client-config.md)
 - **快速入门**: [docs/getting-started.md](docs/getting-started.md)
 - **API 指南**: [docs/api-guide.md](docs/api-guide.md)
 - **后端说明**: [backend/README.md](backend/README.md)
