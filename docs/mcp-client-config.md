@@ -1,6 +1,6 @@
 # MCP客户端配置示例
 
-本文档提供MCPS.ONE项目的MCP客户端配置示例，支持Windows和macOS平台。
+本文档提供mcps-one项目的MCP客户端配置示例，支持Windows和macOS平台。
 
 > **重要提示**: 请将示例中的路径占位符（如 `/path/to/your/project/`、`your-username` 等）替换为您的实际项目路径。
 
@@ -18,10 +18,10 @@ MCP客户端配置文件通常位于以下位置：
 {
   "mcpServers": {
     "mcps-one": {
-      "command": "/path/to/your/project/MCPS.ONE/backend/.venv/Scripts/python.exe",
-      "args": ["/path/to/your/project/MCPS.ONE/backend/start_dynamic_mcp.py"],
+      "command": "/path/to/your/project/mcps-one/backend/.venv/Scripts/python.exe",
+      "args": ["/path/to/your/project/mcps-one/backend/start_dynamic_mcp.py"],
       "env": {
-        "PYTHONPATH": "/path/to/your/project/MCPS.ONE/backend",
+        "PYTHONPATH": "/path/to/your/project/mcps-one/backend",
         "PYTHONIOENCODING": "utf-8",
         "MCP_SERVER_MODE": "server"
       }
@@ -38,10 +38,10 @@ MCP客户端配置文件通常位于以下位置：
 {
   "mcpServers": {
     "mcps-one": {
-      "command": "C:\\path\\to\\your\\project\\MCPS.ONE\\backend\\.venv\\Scripts\\python.exe",
-      "args": ["C:\\path\\to\\your\\project\\MCPS.ONE\\backend\\start_dynamic_mcp.py"],
+      "command": "C:\\path\\to\\your\\project\\mcps-one\\backend\\.venv\\Scripts\\python.exe",
+      "args": ["C:\\path\\to\\your\\project\\mcps-one\\backend\\start_dynamic_mcp.py"],
       "env": {
-        "PYTHONPATH": "C:\\path\\to\\your\\project\\MCPS.ONE\\backend",
+        "PYTHONPATH": "C:\\path\\to\\your\\project\\mcps-one\\backend",
         "PYTHONIOENCODING": "utf-8",
         "MCP_SERVER_MODE": "server"
       }
@@ -58,10 +58,10 @@ MCP客户端配置文件通常位于以下位置：
 {
   "mcpServers": {
     "mcps-one": {
-      "command": "/Users/your-username/path/to/MCPS.ONE/backend/.venv/bin/python",
-      "args": ["/Users/your-username/path/to/MCPS.ONE/backend/start_dynamic_mcp.py"],
+      "command": "/Users/your-username/path/to/mcps-one/backend/.venv/bin/python",
+      "args": ["/Users/your-username/path/to/mcps-one/backend/start_dynamic_mcp.py"],
       "env": {
-        "PYTHONPATH": "/Users/your-username/path/to/MCPS.ONE/backend",
+        "PYTHONPATH": "/Users/your-username/path/to/mcps-one/backend",
         "PYTHONIOENCODING": "utf-8",
         "MCP_SERVER_MODE": "server"
       }
@@ -76,10 +76,10 @@ MCP客户端配置文件通常位于以下位置：
 {
   "mcpServers": {
     "mcps-one": {
-      "command": "~/path/to/MCPS.ONE/backend/.venv/bin/python",
-      "args": ["~/path/to/MCPS.ONE/backend/start_dynamic_mcp.py"],
+      "command": "~/path/to/mcps-one/backend/.venv/bin/python",
+      "args": ["~/path/to/mcps-one/backend/start_dynamic_mcp.py"],
       "env": {
-        "PYTHONPATH": "~/path/to/MCPS.ONE/backend",
+        "PYTHONPATH": "~/path/to/mcps-one/backend",
         "PYTHONIOENCODING": "utf-8",
         "MCP_SERVER_MODE": "server"
       }
@@ -102,7 +102,7 @@ MCP客户端配置文件通常位于以下位置：
 
 ### 1. 确认项目路径
 
-首先确认MCPS.ONE项目的实际安装路径，并相应调整配置中的路径。
+首先确认mcps-one项目的实际安装路径，并相应调整配置中的路径。
 
 ### 2. 检查虚拟环境
 
@@ -110,14 +110,14 @@ MCP客户端配置文件通常位于以下位置：
 
 **Windows:**
 ```powershell
-cd /path/to/your/project/MCPS.ONE/backend
+cd /path/to/your/project/mcps-one/backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
 **macOS:**
 ```bash
-cd ~/path/to/MCPS.ONE/backend
+cd ~/path/to/mcps-one/backend
 python -m venv .venv
 source .venv/bin/activate
 ```
