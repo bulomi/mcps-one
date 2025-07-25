@@ -96,7 +96,7 @@ MCP客户端配置文件通常位于以下位置：
 | `args` | MCP服务器启动脚本路径 | ✅ |
 | `PYTHONPATH` | Python模块搜索路径 | ✅ |
 | `PYTHONIOENCODING` | Python I/O编码设置 | ✅ |
-| `MCP_SERVER_MODE` | MCP服务器运行模式 | ✅ |
+| `MCP_SERVER_MODE` | MCP服务器运行模式，`server`（默认）、`proxy` | 可选 |
 
 ## 📝 配置步骤
 
