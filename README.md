@@ -73,11 +73,21 @@ docker-compose down
 
 ## ⚙️ 配置说明
 
+### 系统配置
+
 系统配置文件位于以下位置：
 
 - **后端配置**: `backend/config/app.yaml`
 - **环境变量**: `backend/.env`
 - **前端配置**: `frontend/vite.config.ts`
+
+### MCP客户端配置
+
+如需将MCPS.ONE作为MCP服务器集成到其他MCP客户端（如Claude Desktop）中，请参考：
+
+- **MCP客户端配置**: [docs/mcp-client-config.md](docs/mcp-client-config.md)
+- 支持Windows和macOS平台
+- 提供详细的配置示例和步骤说明
 
 详细配置说明请参考 [配置指南](docs/configuration.md)
 
@@ -87,6 +97,7 @@ docker-compose down
 - **API 文档**: http://localhost:8000/docs
 - **Docker 部署**: [DOCKER.md](DOCKER.md)
 - **配置指南**: [docs/configuration.md](docs/configuration.md)
+- **MCP客户端配置**: [docs/mcp-client-config.md](docs/mcp-client-config.md)
 - **快速入门**: [docs/getting-started.md](docs/getting-started.md)
 - **API 指南**: [docs/api-guide.md](docs/api-guide.md)
 - **后端说明**: [backend/README.md](backend/README.md)
