@@ -98,50 +98,6 @@ MCP客户端配置文件通常位于以下位置：
 | `PYTHONIOENCODING` | Python I/O编码设置 | ✅ |
 | `MCP_SERVER_MODE` | MCP服务器运行模式，`server`（默认）、`proxy` | 可选 |
 
-## 📝 配置步骤
-
-### 1. 确认项目路径
-
-首先确认mcps-one项目的实际安装路径，并相应调整配置中的路径。
-
-### 2. 检查虚拟环境
-
-确保Python虚拟环境已正确创建并激活：
-
-**Windows:**
-```powershell
-cd /path/to/your/project/mcps-one/backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-
-**macOS:**
-```bash
-cd ~/path/to/mcps-one/backend
-python -m venv .venv
-source .venv/bin/activate
-```
-
-### 3. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. 测试配置
-
-手动运行MCP服务器以验证配置：
-
-```bash
-python start_dynamic_mcp.py
-```
-
-## 🚨 常见问题
-
-### 路径问题
-
-- **Windows**: 使用正斜杠 `/` 或双反斜杠 `\\`
-- **macOS**: 使用正斜杠 `/`，支持 `~` 表示用户目录
 
 ### 权限问题
 
@@ -151,11 +107,5 @@ python start_dynamic_mcp.py
 ### 编码问题
 
 - 设置 `PYTHONIOENCODING: "utf-8"` 确保中文字符正确处理
-
-## 🔄 配置更新
-
-修改配置后，需要重启MCP客户端以使配置生效。
-
----
 
 **注意**: 请根据实际项目路径调整配置中的路径信息。
