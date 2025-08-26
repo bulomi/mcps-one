@@ -135,9 +135,10 @@ docker-compose down
 
 <img width="1583" height="658" alt="image" src="https://github.com/user-attachments/assets/e5eb31de-0ffb-4145-a18a-4aa3e2bac58a" />
 <img width="789" height="739" alt="image" src="https://github.com/user-attachments/assets/feafa226-8a94-4c3a-bcef-a08fb4e63dfe" />
-<img width="794" height="581" alt="image" src="https://github.com/user-attachments/assets/c8537bd8-cce9-47c4-97bf-86c663224a9f" />
-<img width="484" height="312" alt="image" src="https://github.com/user-attachments/assets/ce7d12a3-f921-411c-83ac-e6db554952b2" />
-<img width="512" height="619" alt="image" src="https://github.com/user-attachments/assets/98545ac1-0b5c-45b0-bab7-739a69068237" />
+<img width="792" height="736" alt="image" src="https://github.com/user-attachments/assets/d417693f-0db9-4009-9bf8-dffe44991069" />
+<img width="789" height="580" alt="image" src="https://github.com/user-attachments/assets/c29fde42-ac20-461d-80d7-4ad2dcb42826" />
+<img width="557" height="677" alt="image" src="https://github.com/user-attachments/assets/4f7d87b3-e245-41b0-9d3c-0f7b02f40444" />
+<img width="559" height="680" alt="image" src="https://github.com/user-attachments/assets/f4a4abd3-6afe-44d8-8262-8f8323d6347e" />
 
 
 
