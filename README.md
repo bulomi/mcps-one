@@ -134,7 +134,6 @@ docker-compose down
 | `MCP_SERVER_MODE` | MCP服务器运行模式，`server`（默认）、`proxy` | 可选 |
 
 <img width="1583" height="658" alt="image" src="https://github.com/user-attachments/assets/e5eb31de-0ffb-4145-a18a-4aa3e2bac58a" />
-<img width="789" height="739" alt="image" src="https://github.com/user-attachments/assets/feafa226-8a94-4c3a-bcef-a08fb4e63dfe" />
 <img width="792" height="736" alt="image" src="https://github.com/user-attachments/assets/d417693f-0db9-4009-9bf8-dffe44991069" />
 <img width="789" height="580" alt="image" src="https://github.com/user-attachments/assets/c29fde42-ac20-461d-80d7-4ad2dcb42826" />
 <img width="557" height="677" alt="image" src="https://github.com/user-attachments/assets/4f7d87b3-e245-41b0-9d3c-0f7b02f40444" />
