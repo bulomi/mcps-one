@@ -103,47 +103,9 @@ docker-compose down
 }
 ```
 
-### PowerShell路径配置
-
-如果使用PowerShell风格的路径：
-
-```json
-{
-  "mcpServers": {
-    "mcps-one": {
-      "command": "C:\\path\\to\\your\\project\\mcps-one\\backend\\.venv\\Scripts\\python.exe",
-      "args": ["C:\\path\\to\\your\\project\\mcps-one\\backend\\start_dynamic_mcp.py"],
-      "env": {
-        "PYTHONPATH": "C:\\path\\to\\your\\project\\mcps-one\\backend",
-        "PYTHONIOENCODING": "utf-8",
-        "MCP_SERVER_MODE": "server"
-      }
-    }
-  }
-}
-```
-
 ## 🍎 macOS平台配置
 
 ### 基本配置
-
-```json
-{
-  "mcpServers": {
-    "mcps-one": {
-      "command": "/Users/your-username/path/to/mcps-one/backend/.venv/bin/python",
-      "args": ["/Users/your-username/path/to/mcps-one/backend/start_dynamic_mcp.py"],
-      "env": {
-        "PYTHONPATH": "/Users/your-username/path/to/mcps-one/backend",
-        "PYTHONIOENCODING": "utf-8",
-        "MCP_SERVER_MODE": "server"
-      }
-    }
-  }
-}
-```
-
-### 使用相对路径（推荐）
 
 ```json
 {
@@ -170,6 +132,17 @@ docker-compose down
 | `PYTHONPATH` | Python模块搜索路径 | ✅ |
 | `PYTHONIOENCODING` | Python I/O编码设置 | ✅ |
 | `MCP_SERVER_MODE` | MCP服务器运行模式，`server`（默认）、`proxy` | 可选 |
+
+<img width="1583" height="658" alt="image" src="https://github.com/user-attachments/assets/e5eb31de-0ffb-4145-a18a-4aa3e2bac58a" />
+<img width="789" height="739" alt="image" src="https://github.com/user-attachments/assets/feafa226-8a94-4c3a-bcef-a08fb4e63dfe" />
+<img width="794" height="581" alt="image" src="https://github.com/user-attachments/assets/c8537bd8-cce9-47c4-97bf-86c663224a9f" />
+<img width="484" height="312" alt="image" src="https://github.com/user-attachments/assets/ce7d12a3-f921-411c-83ac-e6db554952b2" />
+<img width="512" height="619" alt="image" src="https://github.com/user-attachments/assets/98545ac1-0b5c-45b0-bab7-739a69068237" />
+
+
+
+
+
 
 
 ## 📚 相关文档
